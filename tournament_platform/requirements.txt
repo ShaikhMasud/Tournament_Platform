@@ -1,0 +1,13 @@
+Django>=5.0,<6.0
+djangorestframework
+djangorestframework-simplejwt
+django-filter
+psycopg2-binary
+channels
+channels-redis
+daphne
+celery
+redis
+django-celery-beat
+weasyprint
+python-decouple
