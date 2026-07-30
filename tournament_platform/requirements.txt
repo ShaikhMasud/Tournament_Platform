@@ -11,3 +11,4 @@ redis
 django-celery-beat
 weasyprint
 python-decouple
+django-cors-headers

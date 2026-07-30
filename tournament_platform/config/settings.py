@@ -8,6 +8,7 @@ DEBUG = True
 ALLOWED_HOSTS = ["*"]  # tighten for real deployment
 
 INSTALLED_APPS = [
+    "corsheaders",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -29,6 +30,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -106,6 +108,8 @@ SIMPLE_JWT = {
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
 }
+
+CORS_ALLOW_ALL_ORIGINS = True  # dev only — never in production
 
 # --- Channels / Celery / Redis: wire these in once you get to the live-
 # scoring and PDF phases (see build plan §7 and §9). Left commented so this
