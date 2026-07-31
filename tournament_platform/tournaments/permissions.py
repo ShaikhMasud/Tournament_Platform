@@ -18,7 +18,7 @@ def _is_active_organizer(user, tournament) -> bool:
     return TournamentRole.objects.filter(
         tournament=tournament,
         user=user,
-        role=TournamentRole.Role.ORGANIZER,
+        role=TournamentRole.ORGANIZER,
         is_active=True,
     ).exists()
 
