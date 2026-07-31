@@ -667,7 +667,16 @@ class TournamentCreateView(generics.CreateAPIView):
         
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save(created_by=request.user, organization=org)
+        tournament = serializer.save(created_by=request.user, organization=org)
+        
+        # Automatically assign the creator as ORGANIZER
+        TournamentRole.objects.create(
+            user=request.user,
+            tournament=tournament,
+            role=TournamentRole.ORGANIZER,
+            is_active=True,
+            granted_by=request.user,
+        )
         
         headers = self.get_success_headers(serializer.data)
         return Response(
