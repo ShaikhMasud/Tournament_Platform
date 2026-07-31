@@ -3,80 +3,461 @@ from rest_framework import serializers
 from accounts.models import AssistantCapability, TournamentRole, User
 from organizations.models import Organization
 
-from .models import Category, Court, Tournament
+from .models import (
+    Category, Court, DashboardStats, Document, DocumentSignature,
+    Notification, Official, Registration, Team, TeamPlayer, Tournament,
+    TournamentSettings, Venue,
+)
+
+
+# =============================================================================
+# SPORT SERIALIZERS
+# =============================================================================
+
+class SportSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Sport
+        fields = [
+            'id', 'name', 'category', 'team_size', 'match_type',
+            'icon', 'rules', 'is_active', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class SportListSerializer(serializers.ModelSerializer):
+    """Lightweight serializer for dropdowns."""
+    class Meta:
+        model = Sport
+        fields = ['id', 'name', 'category', 'team_size', 'match_type', 'icon']
+
+
+# =============================================================================
+# VENUE SERIALIZERS
+# =============================================================================
+
+class VenueSerializer(serializers.ModelSerializer):
+    courts_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Venue
+        fields = [
+            'id', 'tournament', 'name', 'description', 'address',
+            'city', 'state', 'country', 'postal_code', 'total_capacity',
+            'viewing_capacity', 'has_parking', 'has_cafe', 'has_wifi',
+            'is_indoor', 'is_accessible', 'contact_name', 'contact_phone',
+            'contact_email', 'is_active', 'courts_count', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    def get_courts_count(self, obj):
+        return obj.courts.count()
+
+
+class VenueCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Venue
+        fields = [
+            'name', 'description', 'address', 'city', 'state',
+            'country', 'postal_code', 'total_capacity', 'viewing_capacity',
+            'has_parking', 'has_cafe', 'has_wifi', 'is_indoor',
+            'is_accessible', 'contact_name', 'contact_phone', 'contact_email'
+        ]
 
 
 class CourtSerializer(serializers.ModelSerializer):
     class Meta:
         model = Court
-        fields = ["id", "tournament", "name"]
-        read_only_fields = ["id", "tournament"]
-
-    def create(self, validated_data):
-        # tournament is injected by the view from the URL, never trusted
-        # from the request body.
-        tournament = self.context["tournament"]
-        return Court.objects.create(tournament=tournament, **validated_data)
-
-
-class CategorySerializer(serializers.ModelSerializer):
-    courts = CourtSerializer(many=True, read_only=True, source="tournament.courts")
-
-    class Meta:
-        model = Category
         fields = [
-            "id",
-            "tournament",
-            "name",
-            "draw_format",
-            "capacity",
-            "status",
+            'id', 'venue', 'tournament', 'name', 'court_number',
+            'surface', 'seating_capacity', 'is_active', 'is_available',
+            'notes', 'opening_time', 'closing_time', 'created_at', 'updated_at'
         ]
-        read_only_fields = ["id", "tournament", "status"]
-
-    def create(self, validated_data):
-        tournament = self.context["tournament"]
-        return Category.objects.create(tournament=tournament, **validated_data)
+        read_only_fields = ['id', 'created_at', 'updated_at']
 
 
-class TournamentSerializer(serializers.ModelSerializer):
-    """
-    Read: nested categories + courts for convenience on the detail view.
-    Write: organization is validated against the caller's own orgs in the
-    view/permission layer — never taken at face value just because an id
-    was posted.
-    """
+class CourtCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Court
+        fields = [
+            'venue', 'name', 'court_number', 'surface',
+            'seating_capacity', 'is_active', 'is_available', 'notes',
+            'opening_time', 'closing_time'
+        ]
 
-    categories = CategorySerializer(many=True, read_only=True)
-    courts = CourtSerializer(many=True, read_only=True)
 
+# =============================================================================
+# TOURNAMENT SERIALIZERS
+# =============================================================================
+
+class TournamentListSerializer(serializers.ModelSerializer):
+    """Lightweight serializer for lists."""
+    organization_name = serializers.CharField(source='organization.name', read_only=True)
+    categories_count = serializers.SerializerMethodField()
+    registrations_count = serializers.SerializerMethodField()
+    
     class Meta:
         model = Tournament
         fields = [
-            "id",
-            "organization",
-            "name",
-            "sport",
-            "is_public",
-            "created_at",
-            "categories",
-            "courts",
+            'id', 'name', 'status', 'is_public', 'start_date', 'end_date',
+            'organization', 'organization_name', 'sport_name', 'city',
+            'categories_count', 'registrations_count', 'created_at'
         ]
-        read_only_fields = ["id", "created_at"]
-        # 'sport' defaults to "badminton_single_game" at the model level
-        # per the plan's Section 2 decision — not re-defaulted here so the
-        # model stays the single source of truth.
+    
+    def get_categories_count(self, obj):
+        return obj.categories.count()
+    
+    def get_registrations_count(self, obj):
+        return obj.registrations.count()
 
-    def validate_organization(self, organization: Organization):
-        request = self.context["request"]
-        if organization.owner_id != request.user.id:
-            # Never let someone create a tournament under an org they
-            # don't own, even if they guess a valid organization id.
+
+class TournamentDetailSerializer(serializers.ModelSerializer):
+    """Full tournament detail with nested data."""
+    organization_name = serializers.CharField(source='organization.name', read_only=True)
+    created_by_name = serializers.CharField(source='created_by.get_full_name', read_only=True)
+    categories = CategorySerializer(many=True, read_only=True)
+    venues = VenueSerializer(many=True, read_only=True)
+    courts = CourtSerializer(many=True, read_only=True)
+    documents_count = serializers.SerializerMethodField()
+    registrations_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Tournament
+        fields = [
+            'id', 'organization', 'organization_name', 'name', 'description',
+            'sport', 'sport_name', 'tournament_type', 'format',
+            'location', 'venue', 'address', 'city', 'state', 'country',
+            'postal_code', 'timezone', 'start_date', 'end_date',
+            'registration_start', 'registration_end', 'max_players',
+            'min_players', 'max_teams', 'entry_fee', 'currency', 'prize_pool',
+            'banner', 'logo', 'contact_email', 'contact_phone', 'website',
+            'rules', 'terms', 'consent_form', 'status', 'is_public',
+            'visibility', 'created_by', 'created_by_name', 'created_at',
+            'updated_at', 'categories', 'venues', 'courts',
+            'documents_count', 'registrations_count'
+        ]
+        read_only_fields = [
+            'id', 'created_by', 'created_at', 'updated_at',
+            'documents_count', 'registrations_count'
+        ]
+    
+    def get_documents_count(self, obj):
+        return obj.documents.count()
+    
+    def get_registrations_count(self, obj):
+        return obj.registrations.count()
+
+
+class TournamentCreateSerializer(serializers.ModelSerializer):
+    """Serializer for tournament creation."""
+    
+    class Meta:
+        model = Tournament
+        fields = [
+            'name', 'description', 'sport', 'sport_name', 'tournament_type',
+            'format', 'location', 'venue', 'address', 'city', 'state',
+            'country', 'postal_code', 'timezone', 'start_date', 'end_date',
+            'registration_start', 'registration_end', 'max_players',
+            'min_players', 'max_teams', 'entry_fee', 'currency', 'prize_pool',
+            'banner', 'logo', 'contact_email', 'contact_phone', 'website',
+            'rules', 'terms', 'consent_form', 'status', 'is_public', 'visibility'
+        ]
+    
+    def validate_organization(self, value):
+        if value.owner_id != self.context['request'].user.id:
             raise serializers.ValidationError(
                 "You can only create tournaments under your own organization."
             )
-        return organization
+        return value
+    
+    def create(self, validated_data):
+        validated_data['created_by'] = self.context['request'].user
+        validated_data['organization'] = self.context['organization']
+        return super().create(validated_data)
 
+
+class TournamentUpdateSerializer(serializers.ModelSerializer):
+    """Serializer for tournament updates."""
+    
+    class Meta:
+        model = Tournament
+        fields = [
+            'name', 'description', 'sport', 'sport_name', 'tournament_type',
+            'format', 'location', 'venue', 'address', 'city', 'state',
+            'country', 'postal_code', 'timezone', 'start_date', 'end_date',
+            'registration_start', 'registration_end', 'max_players',
+            'min_players', 'max_teams', 'entry_fee', 'currency', 'prize_pool',
+            'banner', 'logo', 'contact_email', 'contact_phone', 'website',
+            'rules', 'terms', 'consent_form', 'status', 'is_public', 'visibility'
+        ]
+
+
+# =============================================================================
+# CATEGORY SERIALIZERS
+# =============================================================================
+
+class CategorySerializer(serializers.ModelSerializer):
+    entries_count = serializers.SerializerMethodField()
+    matches_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Category
+        fields = [
+            'id', 'tournament', 'name', 'description', 'draw_format',
+            'capacity', 'min_capacity', 'min_age', 'max_age', 'gender',
+            'status', 'entry_fee', 'is_seeded', 'seed_count', 'is_drawn',
+            'is_locked', 'is_published', 'entries_count', 'matches_count',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'id', 'tournament', 'is_drawn', 'is_locked', 'is_published',
+            'created_at', 'updated_at'
+        ]
+    
+    def get_entries_count(self, obj):
+        return obj.registrations.filter(status='approved').count()
+    
+    def get_matches_count(self, obj):
+        return obj.matches.count()
+
+
+class CategoryCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = [
+            'name', 'description', 'draw_format', 'capacity',
+            'min_capacity', 'min_age', 'max_age', 'gender', 'entry_fee'
+        ]
+
+
+# =============================================================================
+# TEAM SERIALIZERS
+# =============================================================================
+
+class TeamPlayerSerializer(serializers.ModelSerializer):
+    player_name = serializers.CharField(source='player_profile.display_name', read_only=True)
+    
+    class Meta:
+        model = TeamPlayer
+        fields = [
+            'id', 'team', 'player_profile', 'player_name', 'role',
+            'status', 'jersey_number', 'joined_at', 'approved_at'
+        ]
+        read_only_fields = ['id', 'joined_at', 'approved_at']
+
+
+class TeamSerializer(serializers.ModelSerializer):
+    members = TeamPlayerSerializer(many=True, read_only=True)
+    members_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Team
+        fields = [
+            'id', 'organization', 'tournament', 'name', 'short_name',
+            'description', 'logo', 'banner', 'captain', 'coach', 'manager',
+            'contact_email', 'contact_phone', 'website', 'status', 'is_active',
+            'wins', 'losses', 'draws', 'members', 'members_count',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    def get_members_count(self, obj):
+        return obj.members.filter(status='approved').count()
+
+
+class TeamCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Team
+        fields = [
+            'name', 'short_name', 'description', 'logo', 'banner',
+            'coach', 'manager', 'contact_email', 'contact_phone', 'website'
+        ]
+
+
+# =============================================================================
+# OFFICIAL SERIALIZERS
+# =============================================================================
+
+class OfficialSerializer(serializers.ModelSerializer):
+    user_name = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Official
+        fields = [
+            'id', 'tournament', 'user', 'user_name', 'name', 'email',
+            'phone', 'official_type', 'status', 'certification',
+            'years_experience', 'notes', 'assigned_matches',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    def get_user_name(self, obj):
+        if obj.user:
+            return obj.user.get_full_name() or obj.user.email
+        return obj.name
+
+
+class OfficialCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Official
+        fields = [
+            'user', 'name', 'email', 'phone', 'official_type',
+            'certification', 'years_experience', 'notes'
+        ]
+
+
+# =============================================================================
+# REGISTRATION SERIALIZERS
+# =============================================================================
+
+class RegistrationSerializer(serializers.ModelSerializer):
+    player_name = serializers.SerializerMethodField()
+    team_name = serializers.CharField(source='team.name', read_only=True)
+    category_name = serializers.CharField(source='category.name', read_only=True)
+    tournament_name = serializers.CharField(source='tournament.name', read_only=True)
+    
+    class Meta:
+        model = Registration
+        fields = [
+            'id', 'tournament', 'tournament_name', 'category', 'category_name',
+            'registration_type', 'player_profile', 'player_name', 'team',
+            'team_name', 'status', 'entry_fee', 'is_paid', 'payment_id',
+            'paid_at', 'approved_by', 'approved_at', 'registered_at',
+            'updated_at', 'notes', 'queue_position'
+        ]
+        read_only_fields = [
+            'id', 'is_paid', 'payment_id', 'paid_at', 'approved_by',
+            'approved_at', 'registered_at', 'updated_at'
+        ]
+    
+    def get_player_name(self, obj):
+        if obj.player_profile:
+            return obj.player_profile.display_name
+        return None
+
+
+class RegistrationCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Registration
+        fields = [
+            'category', 'registration_type', 'player_profile', 'team', 'notes'
+        ]
+    
+    def validate(self, data):
+        if data.get('registration_type') == 'player' and not data.get('player_profile'):
+            raise serializers.ValidationError(
+                "Player profile is required for player registration."
+            )
+        if data.get('registration_type') == 'team' and not data.get('team'):
+            raise serializers.ValidationError(
+                "Team is required for team registration."
+            )
+        return data
+
+
+# =============================================================================
+# NOTIFICATION SERIALIZERS
+# =============================================================================
+
+class NotificationSerializer(serializers.ModelSerializer):
+    tournament_name = serializers.CharField(source='tournament.name', read_only=True)
+    
+    class Meta:
+        model = Notification
+        fields = [
+            'id', 'user', 'notification_type', 'title', 'message',
+            'tournament', 'tournament_name', 'status', 'action_url',
+            'action_text', 'priority', 'is_email_sent', 'is_push_sent',
+            'created_at', 'read_at'
+        ]
+        read_only_fields = ['id', 'user', 'created_at']
+
+
+class NotificationCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notification
+        fields = [
+            'notification_type', 'title', 'message', 'tournament',
+            'action_url', 'action_text', 'priority'
+        ]
+
+
+# =============================================================================
+# DOCUMENT SERIALIZERS
+# =============================================================================
+
+class DocumentSerializer(serializers.ModelSerializer):
+    signatures_count = serializers.SerializerMethodField()
+    is_signed_by_user = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Document
+        fields = [
+            'id', 'tournament', 'title', 'document_type', 'description',
+            'file', 'file_name', 'file_size', 'file_type', 'is_public',
+            'requires_signature', 'is_mandatory', 'signatures_count',
+            'is_signed_by_user', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    def get_signatures_count(self, obj):
+        return obj.signatures.filter(is_signed=True).count()
+    
+    def get_is_signed_by_user(self, obj):
+        user = self.context.get('request').user if self.context.get('request') else None
+        if user:
+            return obj.signatures.filter(user=user, is_signed=True).exists()
+        return False
+
+
+class DocumentCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Document
+        fields = [
+            'title', 'document_type', 'description', 'file', 'file_name',
+            'file_size', 'file_type', 'is_public', 'requires_signature',
+            'is_mandatory'
+        ]
+
+
+# =============================================================================
+# SETTINGS SERIALIZERS
+# =============================================================================
+
+class TournamentSettingsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TournamentSettings
+        fields = [
+            'id', 'tournament', 'best_of_sets', 'points_per_set',
+            'tie_break_points', 'min_points_difference', 'enable_tie_break',
+            'warmup_time', 'changeover_time', 'tie_break_time', 'injury_time',
+            'enable_let', 'enable_advantage', 'max_consecutive_points',
+            'enable_pause', 'pause_duration', 'show_names', 'show_scores',
+            'enable_live_streaming', 'streaming_url', 'enable_prizes',
+            'prize_details', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+# =============================================================================
+# DASHBOARD STATS SERIALIZERS
+# =============================================================================
+
+class DashboardStatsSerializer(serializers.ModelSerializer):
+    tournament_name = serializers.CharField(source='tournament.name', read_only=True)
+    
+    class Meta:
+        model = DashboardStats
+        fields = [
+            'id', 'tournament', 'tournament_name', 'total_registrations',
+            'approved_registrations', 'pending_registrations', 'total_teams',
+            'total_matches', 'completed_matches', 'total_courts',
+            'total_revenue', 'collected_fees', 'computed_at'
+        ]
+
+
+# =============================================================================
+# ROLE & CAPABILITY SERIALIZERS
+# =============================================================================
 
 class AssignRoleSerializer(serializers.Serializer):
     """Request body for POST /tournaments/{id}/roles/assign/."""
@@ -105,12 +486,19 @@ class TournamentRoleSerializer(serializers.ModelSerializer):
 
     user_email = serializers.EmailField(source="user.email", read_only=True)
     user_id = serializers.UUIDField(source="user.id", read_only=True)
+    user_name = serializers.SerializerMethodField()
     capabilities = serializers.SerializerMethodField()
 
     class Meta:
         model = TournamentRole
-        fields = ["id", "user_id", "user_email", "role", "is_active", "capabilities"]
+        fields = ["id", "user_id", "user_email", "user_name", "role", "is_active", "capabilities"]
         read_only_fields = fields
+
+    def get_user_name(self, obj):
+        if obj.user:
+            full_name = obj.user.get_full_name()
+            return full_name if full_name else obj.user.email
+        return None
 
     def get_capabilities(self, obj):
         if obj.role != TournamentRole.ASSISTANT:
@@ -132,3 +520,46 @@ class UpdateCapabilitiesSerializer(serializers.Serializer):
         child=serializers.ChoiceField(choices=AssistantCapability.CAPABILITY_CHOICES),
         required=True,
     )
+
+
+# =============================================================================
+# LEGACY SERIALIZERS (for backward compatibility)
+# =============================================================================
+
+class CourtLegacySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Court
+        fields = ["id", "tournament", "name"]
+        read_only_fields = ["id", "tournament"]
+
+    def create(self, validated_data):
+        tournament = self.context["tournament"]
+        return Court.objects.create(tournament=tournament, **validated_data)
+
+
+class CategoryLegacySerializer(serializers.ModelSerializer):
+    courts = CourtLegacySerializer(many=True, read_only=True, source="tournament.courts")
+
+    class Meta:
+        model = Category
+        fields = [
+            "id", "tournament", "name", "draw_format", "capacity", "status",
+        ]
+        read_only_fields = ["id", "tournament", "status"]
+
+    def create(self, validated_data):
+        tournament = self.context["tournament"]
+        return Category.objects.create(tournament=tournament, **validated_data)
+
+
+class TournamentLegacySerializer(serializers.ModelSerializer):
+    categories = CategoryLegacySerializer(many=True, read_only=True)
+    courts = CourtLegacySerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Tournament
+        fields = [
+            "id", "organization", "name", "sport", "is_public", "created_at",
+            "categories", "courts",
+        ]
+        read_only_fields = ["id", "created_at"]
