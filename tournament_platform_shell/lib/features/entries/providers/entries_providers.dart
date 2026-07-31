@@ -119,7 +119,7 @@ class EntriesNotifier extends FamilyAsyncNotifier<EntriesListState, String> {
     } catch (e, st) {
       state = AsyncValue.data(current.copyWith(isLoadingMore: false));
       // Surface the error without wiping the already-loaded list.
-      state = AsyncValue.error(e, st).copyWithPrevious(state);
+      state = AsyncValue<EntriesListState>.error(e, st).copyWithPrevious(state);
     }
   }
 
@@ -147,6 +147,16 @@ class EntriesNotifier extends FamilyAsyncNotifier<EntriesListState, String> {
       () => _fetchFirstPage(
         search: current?.search ?? '',
         status: current?.status,
+      ),
+    );
+  }
+
+  Future<void> refresh() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(
+      () => _fetchFirstPage(
+        search: state.value?.search ?? '',
+        status: state.value?.status,
       ),
     );
   }
