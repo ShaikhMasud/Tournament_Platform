@@ -295,11 +295,44 @@ class PlayerHomeScreen extends ConsumerWidget {
     );
   }
 
-  void _showTournamentPicker(BuildContext context, WidgetRef ref) {
-    // TODO: Show tournament picker for leaderboard
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Select a tournament to view leaderboard')),
-    );
+  void _showTournamentPicker(BuildContext context, WidgetRef ref) async {
+    final tournamentsAsync = ref.read(playerTournamentsProvider);
+    
+    tournamentsAsync.whenData((tournaments) {
+      if (tournaments.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No tournaments to show leaderboard for')),
+        );
+        return;
+      }
+      
+      showModalBottomSheet(
+        context: context,
+        builder: (context) => Container(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Select Tournament',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              ...tournaments.map((t) => ListTile(
+                leading: const Icon(Icons.emoji_events),
+                title: Text(t.name),
+                subtitle: Text(t.categoryName),
+                onTap: () {
+                  Navigator.pop(context);
+                  context.push('/player/leaderboard/${t.tournamentId}?name=${Uri.encodeComponent(t.name)}');
+                },
+              )),
+            ],
+          ),
+        ),
+      );
+    });
   }
 }
 

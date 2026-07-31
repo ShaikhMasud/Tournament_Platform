@@ -381,15 +381,7 @@ class _OrganizationCard extends StatelessWidget {
                       label: const Text('Team'),
                       onPressed: () => context.go('/organizer/organizations/${organization.id}/team?name=${Uri.encodeComponent(organization.name)}'),
                     ),
-                    ActionChip(
-                      avatar: const Icon(Icons.person_add, size: 18),
-                      label: const Text('Player Mgmt'),
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Player management coming soon')),
-                        );
-                      },
-                    ),
+
                   ],
                 ),
               ],
