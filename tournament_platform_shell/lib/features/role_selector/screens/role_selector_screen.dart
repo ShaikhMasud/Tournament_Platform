@@ -152,12 +152,14 @@ class RoleSelectorScreen extends ConsumerWidget {
                   ? 'Full tournament management'
                   : _capabilitySummary(role),
               trailing: const Icon(Icons.chevron_right),
-              onTap: role.isOrganizer
-                  ? () {
-                      ref.read(selectedRoleProvider.notifier).state = role;
-                      context.go('/organizer/home');
-                    }
-                  : null,
+              onTap: () {
+                ref.read(selectedRoleProvider.notifier).state = role;
+                if (role.isOrganizer) {
+                  context.go('/organizer/home');
+                } else {
+                  context.go('/assistant/tournaments/${role.tournamentId}?name=${Uri.encodeComponent(role.tournamentName)}');
+                }
+              },
             ),
         ],
       ),
