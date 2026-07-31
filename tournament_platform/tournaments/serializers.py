@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from accounts.models import AssistantCapability, TournamentRole, User
 from organizations.models import Organization
 
 from .models import Category, Court, Tournament
@@ -75,3 +76,59 @@ class TournamentSerializer(serializers.ModelSerializer):
                 "You can only create tournaments under your own organization."
             )
         return organization
+
+
+class AssignRoleSerializer(serializers.Serializer):
+    """Request body for POST /tournaments/{id}/roles/assign/."""
+
+    email = serializers.EmailField(required=True)
+    role = serializers.ChoiceField(
+        choices=[TournamentRole.ORGANIZER, TournamentRole.ASSISTANT],
+        required=True,
+    )
+    capabilities = serializers.ListField(
+        child=serializers.ChoiceField(choices=AssistantCapability.CAPABILITY_CHOICES),
+        required=False,
+        default=list,
+    )
+
+    def validate_email(self, value):
+        try:
+            User.objects.get(email=value)
+        except User.DoesNotExist:
+            raise serializers.ValidationError("No user found with this email address.")
+        return value
+
+
+class TournamentRoleSerializer(serializers.ModelSerializer):
+    """Read-only serializer for tournament roles."""
+
+    user_email = serializers.EmailField(source="user.email", read_only=True)
+    user_id = serializers.UUIDField(source="user.id", read_only=True)
+    capabilities = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TournamentRole
+        fields = ["id", "user_id", "user_email", "role", "is_active", "capabilities"]
+        read_only_fields = fields
+
+    def get_capabilities(self, obj):
+        if obj.role != TournamentRole.ASSISTANT:
+            return []
+        caps = obj.capabilities.all()
+        return [
+            {
+                "capability": c.capability,
+                "is_active": c.is_active,
+            }
+            for c in caps
+        ]
+
+
+class UpdateCapabilitiesSerializer(serializers.Serializer):
+    """Request body for POST /tournaments/{id}/roles/{role_id}/capabilities/."""
+
+    capabilities = serializers.ListField(
+        child=serializers.ChoiceField(choices=AssistantCapability.CAPABILITY_CHOICES),
+        required=True,
+    )

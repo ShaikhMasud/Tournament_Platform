@@ -60,13 +60,13 @@ class EntriesRepository {
     return EntryPage.fromJson(response.data as Map<String, dynamic>);
   }
 
-  /// POST /api/categories/{id}/entries/create/
+  /// POST /api/categories/{id}/entries/add/
   /// Omit [playerId] to enter the caller's own player profile; pass it
   /// (Organizer/capable Assistant only) to add someone else.
   Future<Entry> addEntry({required String categoryId, int? playerId}) async {
     try {
       final response = await _apiClient.dio.post(
-        '${ApiEndpoints.entries(categoryId)}create/',
+        '${ApiEndpoints.entries(categoryId)}add/',
         data: {if (playerId != null) 'player': playerId},
       );
       return Entry.fromJson(response.data as Map<String, dynamic>);

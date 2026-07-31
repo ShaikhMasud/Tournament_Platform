@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:tournament_platform/features/roles/screens/tournament_roles_screen.dart';
 import 'package:tournament_platform/features/tournaments/screens/category_court_management_screen.dart';
 import 'package:tournament_platform/features/tournaments/screens/organizer_home_screen.dart';
 
@@ -8,6 +9,7 @@ import '../features/auth/providers/auth_providers.dart';
 import '../features/auth/screens/login_screen.dart';
 import '../features/auth/screens/signup_screen.dart';
 import '../features/draws/screens/draw_screen.dart';
+import '../features/entries/screens/category_entries_screen.dart';
 import '../features/matches/screens/match_live_scoring_screen.dart';
 import '../features/matches/screens/matches_list_screen.dart';
 import '../features/results/screens/results_screen.dart';
@@ -49,6 +51,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           return CategoryCourtManagementScreen(tournamentId: id);
         },
       ),
+      // Entries routes.
+      GoRoute(
+        path: '/tournaments/:tournamentId/categories/:categoryId/entries',
+        builder: (context, state) {
+          final categoryId = state.pathParameters['categoryId']!;
+          final categoryName = state.uri.queryParameters['name'] ?? 'Category';
+          return CategoryEntriesScreen(categoryId: categoryId, categoryName: categoryName);
+        },
+      ),
       // Draw routes.
       GoRoute(
         path: '/tournaments/:tournamentId/categories/:categoryId/draw',
@@ -56,6 +67,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           final categoryId = state.pathParameters['categoryId']!;
           final categoryName = state.uri.queryParameters['name'] ?? 'Draw';
           return DrawScreen(categoryId: categoryId, categoryName: categoryName);
+        },
+      ),
+      // Roles routes.
+      GoRoute(
+        path: '/tournaments/:tournamentId/team',
+        builder: (context, state) {
+          final tournamentId = state.pathParameters['tournamentId']!;
+          final tournamentName = state.uri.queryParameters['name'] ?? 'Tournament';
+          return TournamentRolesScreen(tournamentId: tournamentId, tournamentName: tournamentName);
         },
       ),
       // Matches routes.

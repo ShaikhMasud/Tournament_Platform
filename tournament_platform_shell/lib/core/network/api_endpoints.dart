@@ -16,6 +16,11 @@ class ApiEndpoints {
   // --- Tournaments ---
   static const String tournaments = '/tournaments/';
   static String tournament(String id) => '/tournaments/$id/';
+  static String tournamentRoles(String tournamentId) => '/tournaments/$tournamentId/roles/';
+  static String tournamentRole(String tournamentId, String roleId) =>
+      '/tournaments/$tournamentId/roles/$roleId/';
+  static String tournamentRoleCapabilities(String tournamentId, String roleId) =>
+      '/tournaments/$tournamentId/roles/$roleId/capabilities/';
 
   // --- Categories (nested under a tournament) ---
   static String categories(String tournamentId) =>
