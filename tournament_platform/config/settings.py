@@ -1,11 +1,12 @@
+import os
 from datetime import timedelta
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = "dev-secret-key-change-in-production"
-DEBUG = True
-ALLOWED_HOSTS = ["*"]  # tighten for real deployment
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-secret-key-change-in-production")
+DEBUG = os.environ.get("DJANGO_DEBUG", "True").lower() in ("true", "1", "yes")
+ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "*").split(",")
 
 INSTALLED_APPS = [
     "corsheaders",
@@ -64,16 +65,45 @@ ASGI_APPLICATION = "config.asgi.application"
 
 AUTH_USER_MODEL = "accounts.User"
 
-# NOTE: sqlite here is for local scaffolding/verification only — switch to
-# postgres per the build plan before doing real concurrency testing, since
-# sqlite doesn't give you real row-level locking for select_for_update().
+# Database configuration - supports both SQLite (dev) and PostgreSQL (production)
+# Set DATABASE_URL environment variable for PostgreSQL:
+#   postgresql://user:password@localhost:5432/tournament_platform
+# Or set individual environment variables:
+#   DB_ENGINE=django.db.backends.postgresql
+#   DB_NAME=tournament_platform
+#   DB_USER=postgres
+#   DB_PASSWORD=yourpassword
+#   DB_HOST=localhost
+#   DB_PORT=5432
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
+db_url = os.environ.get("DATABASE_URL", "")
+
+if db_url.startswith("postgres"):
+    # Use DATABASE_URL format (e.g., postgresql://user:pass@localhost:5432/dbname)
+    import dj_database_url
+    DATABASES = {"default": dj_database_url.parse(db_url)}
+else:
+    # Fallback to individual settings
+    db_engine = os.environ.get("DB_ENGINE", "")
+    if db_engine == "django.db.backends.postgresql":
+        DATABASES = {
+            "default": {
+                "ENGINE": "django.db.backends.postgresql",
+                "NAME": os.environ.get("DB_NAME", "tournament_platform"),
+                "USER": os.environ.get("DB_USER", "postgres"),
+                "PASSWORD": os.environ.get("DB_PASSWORD", ""),
+                "HOST": os.environ.get("DB_HOST", "localhost"),
+                "PORT": os.environ.get("DB_PORT", "5432"),
+            }
+        }
+    else:
+        # Default to SQLite for local development
+        DATABASES = {
+            "default": {
+                "ENGINE": "django.db.backends.sqlite3",
+                "NAME": BASE_DIR / "db.sqlite3",
+            }
+        }
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
