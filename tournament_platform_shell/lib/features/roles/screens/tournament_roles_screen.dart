@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/roles_repository.dart';
 import '../models/tournament_role.dart';
+import '../providers/roles_providers.dart';
 
 class TournamentRolesScreen extends ConsumerStatefulWidget {
   const TournamentRolesScreen({

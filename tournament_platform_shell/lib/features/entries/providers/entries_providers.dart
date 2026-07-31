@@ -119,7 +119,7 @@ class EntriesNotifier extends FamilyAsyncNotifier<EntriesListState, String> {
     } catch (e, st) {
       state = AsyncValue.data(current.copyWith(isLoadingMore: false));
       // Surface the error without wiping the already-loaded list.
-      state = AsyncValue.error(e, st).copyWithPrevious(state);
+      state = AsyncValue<EntriesListState>.error(e, st).copyWithPrevious(state);
     }
   }
 
@@ -150,9 +150,28 @@ class EntriesNotifier extends FamilyAsyncNotifier<EntriesListState, String> {
       ),
     );
   }
+
+  Future<void> refresh() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(
+      () => _fetchFirstPage(
+        search: state.value?.search ?? '',
+        status: state.value?.status,
+      ),
+    );
+  }
 }
 
 final entriesProvider =
     AsyncNotifierProvider.family<EntriesNotifier, EntriesListState, String>(
   EntriesNotifier.new,
 );
+
+/// Whether the current selected role can manage entries (organizers and
+/// assistants with entry_management capability).
+final canManageEntriesProvider = Provider<bool>((ref) {
+  final selectedRole = ref.watch(selectedRoleProvider);
+  if (selectedRole == null) return false;
+  if (selectedRole.isOrganizer) return true;
+  return selectedRole.capabilities.any((c) => c.capability == 'entry_management' && c.isActive);
+});

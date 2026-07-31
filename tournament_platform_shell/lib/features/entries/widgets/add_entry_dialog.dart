@@ -14,7 +14,7 @@ import '../providers/entries_providers.dart';
 Future<void> showAddEntryDialog(
   BuildContext context,
   WidgetRef ref, {
-  required int categoryId,
+  required String categoryId,
 }) async {
   final canManage = ref.read(canManageEntriesProvider);
   final playerIdController = TextEditingController();
