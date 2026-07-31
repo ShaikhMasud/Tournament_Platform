@@ -2,10 +2,10 @@ from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from rest_framework import mixins, status, viewsets
+from rest_framework import generics, mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter, OrderingFilter
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django_filters.rest_framework import DjangoFilterBackend
@@ -23,6 +23,7 @@ from .serializers import (
     AssignRoleSerializer, CategoryCreateSerializer, CategorySerializer,
     CourtCreateSerializer, CourtLegacySerializer, CourtSerializer,
     DashboardStatsSerializer, DocumentCreateSerializer, DocumentSerializer,
+    NotificationCreateSerializer, NotificationSerializer,
     OfficialCreateSerializer, OfficialSerializer,
     RegistrationCreateSerializer, RegistrationSerializer,
     SportListSerializer, SportSerializer,
@@ -33,6 +34,23 @@ from .serializers import (
     TournamentUpdateSerializer, UpdateCapabilitiesSerializer,
     VenueCreateSerializer, VenueSerializer,
 )
+
+
+# =============================================================================
+# MIXIN FOR NESTED UNDER TOURNAMENT
+# =============================================================================
+
+class _NestedUnderTournamentMixin:
+    """Shared plumbing for viewsets nested under tournaments."""
+    
+    def get_tournament(self):
+        return get_object_or_404(Tournament, pk=self.kwargs.get("tournament_pk"))
+    
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["tournament"] = self.get_tournament()
+        context["request"] = self.request
+        return context
 
 
 # =============================================================================
@@ -610,17 +628,196 @@ class TournamentViewSet(viewsets.ModelViewSet):
 
 
 # =============================================================================
-# MIXIN FOR NESTED UNDER TOURNAMENT
+# ADDITIONAL TOURNAMENT VIEWS
 # =============================================================================
 
-class _NestedUnderTournamentMixin:
-    """Shared plumbing for viewsets nested under tournaments."""
-    
-    def get_tournament(self):
-        return get_object_or_404(Tournament, pk=self.kwargs.get("tournament_pk"))
-    
-    def get_serializer_context(self):
-        context = super().get_serializer_context()
-        context["tournament"] = self.get_tournament()
-        context["request"] = self.request
-        return context
+class PublicTournamentsView(generics.ListAPIView):
+    """
+    GET /api/tournaments/public/ - List all public tournaments.
+    """
+    serializer_class = TournamentListSerializer
+    permission_classes = [AllowAny]
+    queryset = Tournament.objects.filter(is_public=True).order_by('-created_at')
+
+
+class TournamentCreateView(generics.CreateAPIView):
+    """
+    POST /api/tournaments/create/ - Create a new tournament.
+    Requires authentication.
+    """
+    serializer_class = TournamentCreateSerializer
+    permission_classes = [IsAuthenticated]
+
+    def create(self, request, *args, **kwargs):
+        org_id = request.data.get('organization')
+        if not org_id:
+            return Response(
+                {'organization': 'Organization is required.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        from organizations.models import Organization
+        try:
+            org = Organization.objects.get(pk=org_id, owner=request.user)
+        except Organization.DoesNotExist:
+            return Response(
+                {'organization': 'Invalid organization or you are not the owner.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(created_by=request.user, organization=org)
+        
+        headers = self.get_success_headers(serializer.data)
+        return Response(
+            TournamentDetailSerializer(serializer.instance).data,
+            status=status.HTTP_201_CREATED,
+            headers=headers
+        )
+
+
+# =============================================================================
+# ROLE MANAGEMENT VIEWS
+# =============================================================================
+
+class TournamentRoleListView(generics.ListAPIView):
+    """
+    GET /api/tournaments/{id}/roles/ - List all roles for a tournament.
+    """
+    serializer_class = TournamentRoleSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        tournament_pk = self.kwargs.get("tournament_pk")
+        return TournamentRole.objects.filter(
+            tournament_id=tournament_pk
+        ).select_related("user")
+
+
+class TournamentRoleDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    GET/PATCH/DELETE /api/tournaments/{id}/roles/{role_id}/ - Manage a specific role.
+    """
+    serializer_class = TournamentRoleSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        tournament_pk = self.kwargs.get("tournament_pk")
+        return TournamentRole.objects.filter(
+            tournament_id=tournament_pk
+        ).select_related("user")
+
+    def destroy(self, request, *args, **kwargs):
+        role = self.get_object()
+        role.is_active = False
+        role.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class TournamentRoleCapabilitiesView(APIView):
+    """
+    POST /api/tournaments/{id}/roles/{role_id}/capabilities/ - Update capabilities for a role.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, tournament_pk, role_id):
+        tournament_role = get_object_or_404(
+            TournamentRole, 
+            pk=role_id, 
+            tournament_id=tournament_pk
+        )
+        
+        if tournament_role.role != TournamentRole.ASSISTANT:
+            return Response(
+                {'detail': 'Capabilities can only be set for Assistant roles.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        serializer = UpdateCapabilitiesSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        # Update capabilities
+        capability_names = serializer.validated_data['capabilities']
+        
+        # Clear existing capabilities
+        tournament_role.capabilities.all().delete()
+        
+        # Add new capabilities
+        for cap_name in capability_names:
+            AssistantCapability.objects.create(
+                tournament_role=tournament_role,
+                capability=cap_name,
+                is_active=True
+            )
+        
+        return Response(TournamentRoleSerializer(tournament_role).data)
+
+
+class AssignExistingUserView(APIView):
+    """
+    POST /api/tournaments/{id}/assign-user/ - Assign an existing user to a tournament role.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, tournament_pk):
+        serializer = AssignRoleSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        email = serializer.validated_data['email']
+        role = serializer.validated_data['role']
+        capabilities = serializer.validated_data.get('capabilities', [])
+        
+        # Get the user
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response(
+                {'email': 'No user found with this email.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        tournament = get_object_or_404(Tournament, pk=tournament_pk)
+        
+        # Check if role already exists
+        existing_role = TournamentRole.objects.filter(
+            user=user,
+            tournament=tournament,
+            role=role
+        ).first()
+        
+        if existing_role:
+            if existing_role.is_active:
+                return Response(
+                    {'detail': f'User already has an active {role} role.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            else:
+                # Reactivate the role
+                existing_role.is_active = True
+                existing_role.granted_by = request.user
+                existing_role.save()
+                role_instance = existing_role
+        else:
+            # Create new role
+            role_instance = TournamentRole.objects.create(
+                user=user,
+                tournament=tournament,
+                role=role,
+                is_active=True,
+                granted_by=request.user
+            )
+        
+        # Add capabilities if assistant
+        if role == TournamentRole.ASSISTANT:
+            for cap_name in capabilities:
+                AssistantCapability.objects.get_or_create(
+                    tournament_role=role_instance,
+                    capability=cap_name,
+                    defaults={'is_active': True}
+                )
+        
+        return Response(
+            TournamentRoleSerializer(role_instance).data,
+            status=status.HTTP_201_CREATED
+        )

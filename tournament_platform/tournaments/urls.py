@@ -6,7 +6,6 @@ from .views import (
     AssignExistingUserView,
     CategoryViewSet,
     CourtViewSet,
-    PlayerTournamentsView,
     PublicTournamentsView,
     TournamentCreateView,
     TournamentRoleCapabilitiesView,
@@ -14,6 +13,7 @@ from .views import (
     TournamentRoleListView,
     TournamentViewSet,
 )
+from players.views import PlayerTournamentsView
 
 router = DefaultRouter()
 router.register(r"tournaments", TournamentViewSet, basename="tournament")
@@ -27,9 +27,7 @@ tournaments_router.register(
 tournaments_router.register(r"courts", CourtViewSet, basename="tournament-courts")
 
 urlpatterns = [
-    path("", include(router.urls)),
-    path("", include(tournaments_router.urls)),
-    # Additional tournament endpoints
+    # Additional tournament endpoints (must come before router to avoid being overridden)
     path(
         "tournaments/public/",
         PublicTournamentsView.as_view(),
@@ -66,4 +64,6 @@ urlpatterns = [
         AssignExistingUserView.as_view(),
         name="tournament-assign-user",
     ),
+    path("", include(router.urls)),
+    path("", include(tournaments_router.urls)),
 ]
