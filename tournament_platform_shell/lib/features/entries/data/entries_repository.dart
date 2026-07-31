@@ -66,7 +66,7 @@ class EntriesRepository {
   Future<Entry> addEntry({required String categoryId, String? playerId}) async {
     try {
       final response = await _apiClient.dio.post(
-        '${ApiEndpoints.entries(categoryId)}add/',
+        ApiEndpoints.addEntry(categoryId),
         data: {if (playerId != null) 'player': playerId},
       );
       return Entry.fromJson(response.data as Map<String, dynamic>);

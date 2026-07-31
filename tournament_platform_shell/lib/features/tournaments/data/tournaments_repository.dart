@@ -54,7 +54,7 @@ class TournamentsRepository {
     final response = await _apiClient.dio.post(
       ApiEndpoints.createTournament,
       data: {
-        'organization_id': organizationId,
+        'organization': organizationId,
         'name': name,
         if (sport != null) 'sport': sport,
         'is_public': isPublic,

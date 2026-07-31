@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../../../core/network/api_client.dart';
+import '../../../core/network/api_endpoints.dart';
 import '../../../core/network/token_storage.dart';
 import '../models/session.dart';
 
@@ -28,7 +29,7 @@ class AuthRepository {
     required String displayName,
   }) async {
     try {
-      final response = await _apiClient.dio.post('/auth/signup', data: {
+      final response = await _apiClient.dio.post(ApiEndpoints.authSignup, data: {
         'email': email,
         'username': username,
         'password': password,
@@ -46,7 +47,7 @@ class AuthRepository {
 
   Future<void> login({required String email, required String password}) async {
     try {
-      final response = await _apiClient.dio.post('/auth/login', data: {
+      final response = await _apiClient.dio.post(ApiEndpoints.authLogin, data: {
         'email': email,
         'password': password,
       });
@@ -64,7 +65,7 @@ class AuthRepository {
 
   Future<Session> fetchSession() async {
     try {
-      final response = await _apiClient.dio.get('/auth/session');
+      final response = await _apiClient.dio.get(ApiEndpoints.authSession);
       return Session.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       throw AuthException(_extractError(e));
@@ -78,7 +79,7 @@ class AuthRepository {
     final refresh = await _tokenStorage.refreshToken;
     try {
       if (refresh != null) {
-        await _apiClient.dio.post('/auth/logout', data: {'refresh': refresh});
+        await _apiClient.dio.post(ApiEndpoints.authLogout, data: {'refresh': refresh});
       }
     } on DioException {
       // Best-effort server-side blacklist; clear local tokens regardless so
