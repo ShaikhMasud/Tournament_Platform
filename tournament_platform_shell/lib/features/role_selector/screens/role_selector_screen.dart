@@ -17,10 +17,11 @@ class RoleSelectorScreen extends ConsumerWidget {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    final hasPlayerAccess = session.playerProfiles.isNotEmpty;
     final roles = session.tournamentRoles;
 
-    if (!hasPlayerAccess && roles.isEmpty) {
+    // Empty state: only when no player profiles and no roles
+    // (Normally signup creates a player profile, so this is rare)
+    if (session.playerProfiles.isEmpty && roles.isEmpty) {
       return Scaffold(
         appBar: AppBar(
           title: const Text('Tournament Ops'),
@@ -131,17 +132,18 @@ class RoleSelectorScreen extends ConsumerWidget {
                 ),
           ),
           const SizedBox(height: 12),
-          // Player tile
-          if (hasPlayerAccess)
-            _RoleTile(
-              icon: Icons.sports_tennis,
-              iconColor: Colors.green,
-              title: 'Player',
-              subtitle: '${session.playerProfiles.length} entr'
-                  '${session.playerProfiles.length == 1 ? "y" : "ies"}',
-              trailing: const Icon(Icons.lock_outline, size: 18),
-              onTap: null,
-            ),
+          // Player tile - always accessible for signed up users
+          _RoleTile(
+            icon: Icons.sports_tennis,
+            iconColor: Colors.green,
+            title: 'Player',
+            subtitle: session.playerProfiles.isEmpty
+                ? 'No tournament entries yet'
+                : '${session.playerProfiles.length} entr'
+                    '${session.playerProfiles.length == 1 ? "y" : "ies"}',
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.go('/player/home'),
+          ),
           // Tournament roles
           for (final role in roles)
             _RoleTile(

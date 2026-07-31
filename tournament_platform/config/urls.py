@@ -10,4 +10,5 @@ urlpatterns = [
     path("api/", include("draws.urls")),
     path("api/", include("matches.urls")),
     path("api/", include("results.urls")),
+    path("api/player/", include("players.urls")),
 ]

@@ -56,4 +56,9 @@ class ApiEndpoints {
 
   // --- WebSocket ---
   static String matchWebSocket(String matchId) => '/ws/matches/$matchId/';
+
+  // --- Player (Phase 8) ---
+  static const String playerTournaments = '/player/tournaments/';
+  static const String playerEntries = '/player/entries/';
+  static String playerEntry(String entryId) => '/player/entries/$entryId/';
 }
