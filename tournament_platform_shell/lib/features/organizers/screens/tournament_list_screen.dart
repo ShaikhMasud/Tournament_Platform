@@ -204,7 +204,7 @@ class TournamentListScreen extends ConsumerWidget {
                         final tournament = await repo.createTournament(
                           organizationId: organizationId,
                           name: nameController.text.trim(),
-                          sport: selectedSport,
+                          sportName: selectedSport,
                           isPublic: isPublic,
                         );
 

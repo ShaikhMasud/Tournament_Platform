@@ -410,10 +410,12 @@ class TournamentDetailSerializer(serializers.ModelSerializer):
 class TournamentCreateSerializer(serializers.ModelSerializer):
     """Serializer for tournament creation."""
     
+    organization = serializers.PrimaryKeyRelatedField(read_only=True)
+    
     class Meta:
         model = Tournament
         fields = [
-            'name', 'description', 'sport', 'sport_name', 'tournament_type',
+            'organization', 'name', 'description', 'sport', 'sport_name', 'tournament_type',
             'format', 'location', 'venue', 'address', 'city', 'state',
             'country', 'postal_code', 'timezone', 'start_date', 'end_date',
             'registration_start', 'registration_end', 'max_players',
@@ -422,16 +424,9 @@ class TournamentCreateSerializer(serializers.ModelSerializer):
             'rules', 'terms', 'consent_form', 'status', 'is_public', 'visibility'
         ]
     
-    def validate_organization(self, value):
-        if value.owner_id != self.context['request'].user.id:
-            raise serializers.ValidationError(
-                "You can only create tournaments under your own organization."
-            )
-        return value
-    
     def create(self, validated_data):
+        # organization is passed by the view via save()
         validated_data['created_by'] = self.context['request'].user
-        validated_data['organization'] = self.context['organization']
         return super().create(validated_data)
 
 

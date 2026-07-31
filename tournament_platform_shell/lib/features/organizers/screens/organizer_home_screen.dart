@@ -185,7 +185,7 @@ class OrganizerHomeScreen extends ConsumerWidget {
                         final tournament = await repo.createTournament(
                           organizationId: orgId,
                           name: nameController.text.trim(),
-                          sport: selectedSport,
+                          sportName: selectedSport,
                           isPublic: isPublic,
                         );
                         

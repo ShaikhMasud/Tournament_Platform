@@ -48,7 +48,7 @@ class TournamentsRepository {
   Future<Tournament> createTournament({
     required String organizationId,
     required String name,
-    String? sport,
+    String? sportName,
     bool isPublic = false,
   }) async {
     final response = await _apiClient.dio.post(
@@ -56,7 +56,7 @@ class TournamentsRepository {
       data: {
         'organization': organizationId,
         'name': name,
-        if (sport != null) 'sport': sport,
+        'sport_name': sportName ?? 'badminton_single_game',
         'is_public': isPublic,
       },
     );
