@@ -7,7 +7,6 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../../../core/config/api_config.dart';
 import '../../../core/network/api_endpoints.dart';
-import '../../../core/network/token_storage.dart';
 import '../models/match.dart';
 import '../providers/matches_providers.dart';
 
@@ -38,10 +37,7 @@ class _MatchLiveScoringScreenState extends ConsumerState<MatchLiveScoringScreen>
 
   Future<void> _connectWebSocket() async {
     try {
-      // Get token for WebSocket auth.
-      // In a real app, you'd inject this via provider.
       final wsUrl = '${ApiConfig.wsBase}${ApiEndpoints.matchWebSocket(widget.matchId)}';
-
       _channel = WebSocketChannel.connect(Uri.parse(wsUrl));
 
       _channel!.stream.listen(
@@ -49,12 +45,9 @@ class _MatchLiveScoringScreenState extends ConsumerState<MatchLiveScoringScreen>
         onError: (error) {
           setState(() => _error = 'WebSocket error: $error');
         },
-        onDone: () {
-          // Connection closed.
-        },
+        onDone: () {},
       );
 
-      // Send initial state request.
       _channel!.sink.add(jsonEncode({'action': 'request_state'}));
     } catch (e) {
       setState(() => _error = 'Failed to connect: $e');
@@ -80,17 +73,12 @@ class _MatchLiveScoringScreenState extends ConsumerState<MatchLiveScoringScreen>
           SnackBar(content: Text(data['error'] as String), backgroundColor: Colors.red),
         );
       }
-    } catch (e) {
-      // Ignore parse errors.
-    }
+    } catch (e) {}
   }
 
   void _incrementScore(int entry) {
-    if (_winnerId != null) return; // Match already has a winner.
+    if (_winnerId != null) return;
     if (_channel == null) return;
-
-    final newEntry1Points = entry == 1 ? _entry1Points + 1 : _entry1Points;
-    final newEntry2Points = entry == 2 ? _entry2Points + 1 : _entry2Points;
 
     _channel!.sink.add(jsonEncode({
       'action': 'score',
@@ -109,7 +97,6 @@ class _MatchLiveScoringScreenState extends ConsumerState<MatchLiveScoringScreen>
   Widget build(BuildContext context) {
     final matchAsync = ref.watch(matchDetailProvider(widget.matchId));
 
-    // Sync REST state when available.
     matchAsync.whenData((match) {
       if (_isLoading && _match == null) {
         _match = match;
@@ -124,6 +111,8 @@ class _MatchLiveScoringScreenState extends ConsumerState<MatchLiveScoringScreen>
     return Scaffold(
       appBar: AppBar(
         title: Text(_match?.categoryName ?? 'Live Scoring'),
+        backgroundColor: Colors.red,
+        foregroundColor: Colors.white,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -134,130 +123,226 @@ class _MatchLiveScoringScreenState extends ConsumerState<MatchLiveScoringScreen>
   Widget _buildScoreView() {
     return Column(
       children: [
-        const SizedBox(height: 24),
-        // Live indicator.
+        // Header with LIVE indicator
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          decoration: BoxDecoration(
-            color: Colors.red,
-            borderRadius: BorderRadius.circular(12),
-          ),
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          color: Colors.red,
           child: const Row(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.circle, color: Colors.white, size: 8),
-              SizedBox(width: 6),
-              Text('LIVE', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            ],
-          ),
-        ),
-        const SizedBox(height: 32),
-        // Score display.
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  children: [
-                    Text(
-                      _match?.entry1?.playerName ?? 'Player 1',
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    if (_winnerId == _match?.entry1?.id)
-                      const Icon(Icons.emoji_events, color: Colors.amber, size: 32),
-                    const SizedBox(height: 8),
-                    Text(
-                      '$_entry1Points',
-                      style: TextStyle(
-                        fontSize: 72,
-                        fontWeight: FontWeight.bold,
-                        color: _winnerId == _match?.entry1?.id ? Colors.green : Colors.black,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    if (_winnerId == null)
-                      ElevatedButton(
-                        onPressed: () => _incrementScore(1),
-                        style: ElevatedButton.styleFrom(
-                          minimumSize: const Size(100, 50),
-                          backgroundColor: Colors.blue,
-                          foregroundColor: Colors.white,
-                        ),
-                        child: const Text('+1', style: TextStyle(fontSize: 24)),
-                      ),
-                  ],
-                ),
-              ),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
-                child: Text('-', style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold)),
-              ),
-              Expanded(
-                child: Column(
-                  children: [
-                    Text(
-                      _match?.entry2?.playerName ?? 'Player 2',
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    if (_winnerId == _match?.entry2?.id)
-                      const Icon(Icons.emoji_events, color: Colors.amber, size: 32),
-                    const SizedBox(height: 8),
-                    Text(
-                      '$_entry2Points',
-                      style: TextStyle(
-                        fontSize: 72,
-                        fontWeight: FontWeight.bold,
-                        color: _winnerId == _match?.entry2?.id ? Colors.green : Colors.black,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    if (_winnerId == null)
-                      ElevatedButton(
-                        onPressed: () => _incrementScore(2),
-                        style: ElevatedButton.styleFrom(
-                          minimumSize: const Size(100, 50),
-                          backgroundColor: Colors.blue,
-                          foregroundColor: Colors.white,
-                        ),
-                        child: const Text('+1', style: TextStyle(fontSize: 24)),
-                      ),
-                  ],
+              Icon(Icons.circle, color: Colors.white, size: 12),
+              SizedBox(width: 8),
+              Text(
+                'LIVE MATCH',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  letterSpacing: 2,
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 32),
-        if (_winnerId != null)
-          Card(
-            color: Colors.green.shade50,
-            margin: const EdgeInsets.symmetric(horizontal: 32),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.emoji_events, color: Colors.amber),
-                  const SizedBox(width: 8),
-                  Text(
-                    '${_winnerId == _match?.entry1?.id ? _match?.entry1?.playerName : _match?.entry2?.playerName} wins!',
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        
+        Expanded(
+          child: Column(
+            children: [
+              const SizedBox(height: 24),
+              
+              // Score Display
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Player 1
+                    _PlayerCard(
+                      name: _match?.entry1?.playerName ?? 'Player 1',
+                      points: _entry1Points,
+                      isWinner: _winnerId == _match?.entry1?.id,
+                      isEntry1: true,
+                      onIncrement: _winnerId == null ? () => _incrementScore(1) : null,
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // VS Divider
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade200,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Text(
+                        'VS',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Player 2
+                    _PlayerCard(
+                      name: _match?.entry2?.playerName ?? 'Player 2',
+                      points: _entry2Points,
+                      isWinner: _winnerId == _match?.entry2?.id,
+                      isEntry1: false,
+                      onIncrement: _winnerId == null ? () => _incrementScore(2) : null,
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Winner Banner
+              if (_winnerId != null)
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Colors.amber, Colors.orange],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                ],
-              ),
-            ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.emoji_events, color: Colors.white, size: 32),
+                      const SizedBox(width: 12),
+                      Text(
+                        'WINNER: ${_winnerId == _match?.entry1?.id ? _match?.entry1?.playerName : _match?.entry2?.playerName}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              
+              // Error display
+              if (_error != null)
+                Container(
+                  margin: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade100,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.error, color: Colors.red),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text(_error!, style: const TextStyle(color: Colors.red))),
+                    ],
+                  ),
+                ),
+            ],
           ),
-        if (_error != null)
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text(_error!, style: const TextStyle(color: Colors.red)),
-          ),
+        ),
       ],
+    );
+  }
+}
+
+class _PlayerCard extends StatelessWidget {
+  const _PlayerCard({
+    required this.name,
+    required this.points,
+    required this.isWinner,
+    required this.isEntry1,
+    this.onIncrement,
+  });
+
+  final String name;
+  final int points;
+  final bool isWinner;
+  final bool isEntry1;
+  final VoidCallback? onIncrement;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 24),
+      elevation: isWinner ? 8 : 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: isWinner
+            ? const BorderSide(color: Colors.amber, width: 3)
+            : BorderSide.none,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: isEntry1 ? MainAxisAlignment.start : MainAxisAlignment.end,
+              children: [
+                if (isWinner) ...[
+                  const Icon(Icons.emoji_events, color: Colors.amber, size: 24),
+                  const SizedBox(width: 8),
+                ],
+                Expanded(
+                  child: Text(
+                    name,
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    textAlign: isEntry1 ? TextAlign.left : TextAlign.right,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                if (isEntry1) _ScoreButton(points: points, onTap: onIncrement),
+                if (!isEntry1) _ScoreButton(points: points, onTap: onIncrement),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ScoreButton extends StatelessWidget {
+  const _ScoreButton({required this.points, this.onTap});
+
+  final int points;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 100,
+      height: 80,
+      decoration: BoxDecoration(
+        color: onTap != null ? Colors.blue : Colors.grey.shade300,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Center(
+            child: onTap != null
+                ? const Icon(Icons.add, color: Colors.white, size: 40)
+                : Text(
+                    '$points',
+                    style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                  ),
+          ),
+        ),
+      ),
     );
   }
 }
