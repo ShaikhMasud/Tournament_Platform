@@ -55,6 +55,13 @@ class TournamentRolesNotifier extends FamilyAsyncNotifier<List<TournamentRoleSum
       () => ref.read(rolesRepositoryProvider).listRoles(tournamentId),
     );
   }
+
+  Future<void> refresh() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(
+      () => ref.read(rolesRepositoryProvider).listRoles(tournamentId),
+    );
+  }
 }
 
 final tournamentRolesProvider =
