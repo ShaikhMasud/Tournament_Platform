@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../../../core/network/api_client.dart';
+import '../../../core/network/api_endpoints.dart';
 import '../models/entry.dart';
 
 /// One page of entries, as returned by DRF's PageNumberPagination.
@@ -43,13 +44,13 @@ class EntriesRepository {
 
   /// GET /api/categories/{id}/entries/?search=&status=&page=
   Future<EntryPage> listEntries({
-    required int categoryId,
+    required String categoryId,
     String? search,
     String? status,
     int page = 1,
   }) async {
-    final response = await _apiClient.get(
-      '/api/categories/$categoryId/entries/',
+    final response = await _apiClient.dio.get(
+      ApiEndpoints.entries(categoryId),
       queryParameters: {
         if (search != null && search.isNotEmpty) 'search': search,
         if (status != null) 'status': status,
@@ -62,10 +63,10 @@ class EntriesRepository {
   /// POST /api/categories/{id}/entries/create/
   /// Omit [playerId] to enter the caller's own player profile; pass it
   /// (Organizer/capable Assistant only) to add someone else.
-  Future<Entry> addEntry({required int categoryId, int? playerId}) async {
+  Future<Entry> addEntry({required String categoryId, int? playerId}) async {
     try {
-      final response = await _apiClient.post(
-        '/api/categories/$categoryId/entries/create/',
+      final response = await _apiClient.dio.post(
+        '${ApiEndpoints.entries(categoryId)}create/',
         data: {if (playerId != null) 'player': playerId},
       );
       return Entry.fromJson(response.data as Map<String, dynamic>);
@@ -78,9 +79,9 @@ class EntriesRepository {
   }
 
   /// DELETE /api/entries/{id}/
-  Future<void> removeEntry(int entryId) async {
+  Future<void> removeEntry(String entryId) async {
     try {
-      await _apiClient.delete('/api/entries/$entryId/');
+      await _apiClient.dio.delete(ApiEndpoints.entry(entryId));
     } on DioException catch (e) {
       throw EntryActionException(
         e.response?.statusCode ?? 0,

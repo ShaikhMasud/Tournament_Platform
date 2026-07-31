@@ -7,6 +7,10 @@ import 'package:tournament_platform/features/tournaments/screens/organizer_home_
 import '../features/auth/providers/auth_providers.dart';
 import '../features/auth/screens/login_screen.dart';
 import '../features/auth/screens/signup_screen.dart';
+import '../features/draws/screens/draw_screen.dart';
+import '../features/matches/screens/match_live_scoring_screen.dart';
+import '../features/matches/screens/matches_list_screen.dart';
+import '../features/results/screens/results_screen.dart';
 import '../features/role_selector/screens/role_selector_screen.dart';
 
 /// Route guarding lives here, not scattered through screens: every
@@ -45,11 +49,45 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           return CategoryCourtManagementScreen(tournamentId: id);
         },
       ),
-      
-      // Add role-scoped shells here as they're built, e.g.:
-      // GoRoute(path: '/organizer', builder: ...),
-      // GoRoute(path: '/player', builder: ...),
-      // GoRoute(path: '/assistant', builder: ...),
+      // Draw routes.
+      GoRoute(
+        path: '/tournaments/:tournamentId/categories/:categoryId/draw',
+        builder: (context, state) {
+          final categoryId = state.pathParameters['categoryId']!;
+          final categoryName = state.uri.queryParameters['name'] ?? 'Draw';
+          return DrawScreen(categoryId: categoryId, categoryName: categoryName);
+        },
+      ),
+      // Matches routes.
+      GoRoute(
+        path: '/tournaments/:tournamentId/matches',
+        builder: (context, state) {
+          final tournamentId = state.pathParameters['tournamentId']!;
+          final categoryId = state.uri.queryParameters['category'];
+          final status = state.uri.queryParameters['status'];
+          return MatchesListScreen(
+            tournamentId: tournamentId,
+            categoryId: categoryId,
+            status: status,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/matches/:matchId/live',
+        builder: (context, state) {
+          final matchId = state.pathParameters['matchId']!;
+          return MatchLiveScoringScreen(matchId: matchId);
+        },
+      ),
+      // Results routes.
+      GoRoute(
+        path: '/tournaments/:tournamentId/results',
+        builder: (context, state) {
+          final tournamentId = state.pathParameters['tournamentId']!;
+          final tournamentName = state.uri.queryParameters['name'] ?? 'Tournament';
+          return ResultsScreen(tournamentId: tournamentId, tournamentName: tournamentName);
+        },
+      ),
     ],
   );
 });

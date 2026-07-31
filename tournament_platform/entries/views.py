@@ -13,13 +13,6 @@ from .models import Entry
 from .serializers import EntryCreateSerializer, EntrySerializer
 from .services import add_entry, remove_entry
 
-# NOTE: same situation as tournaments/permissions.py in Phase 1 — this
-# wraps what the plan calls core/permissions.py's
-# organizer_or_capability('entry_management') helper. Swap the body of
-# `_actor_is_privileged` for your real helper once you confirm its name;
-# this version is self-contained against TournamentRole/AssistantCapability
-# so Phase 2 isn't blocked on it.
-
 
 def _actor_is_privileged(user, tournament) -> bool:
     """True if `user` is an active Organizer of `tournament`, or an active
@@ -30,7 +23,7 @@ def _actor_is_privileged(user, tournament) -> bool:
     is_organizer = TournamentRole.objects.filter(
         tournament=tournament,
         user=user,
-        role=TournamentRole.Role.ORGANIZER,
+        role=TournamentRole.ORGANIZER,
         is_active=True,
     ).exists()
     if is_organizer:
@@ -39,9 +32,9 @@ def _actor_is_privileged(user, tournament) -> bool:
     return AssistantCapability.objects.filter(
         tournament_role__tournament=tournament,
         tournament_role__user=user,
-        tournament_role__role=TournamentRole.Role.ASSISTANT,
+        tournament_role__role=TournamentRole.ASSISTANT,
         tournament_role__is_active=True,
-        capability="entry_management",
+        capability=AssistantCapability.ENTRY_MANAGEMENT,
         is_active=True,
     ).exists()
 
@@ -72,8 +65,6 @@ class EntryListView(generics.ListAPIView):
         if _actor_is_privileged(self.request.user, tournament):
             return qs.order_by("-created_at")
 
-        # A non-privileged caller (a Player) only ever sees their own
-        # entry in this category, never the full roster.
         player = getattr(self.request.user, "playerprofile", None)
         if player is None:
             return qs.none()

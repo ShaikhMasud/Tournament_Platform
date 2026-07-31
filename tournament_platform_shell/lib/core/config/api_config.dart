@@ -19,7 +19,7 @@ class ApiConfig {
   static String get apiBase => '$baseUrl$apiPrefix';
 
   /// ws:// for local dev; switch to wss:// for anything beyond localhost.
-  static const String wsBaseUrl = String.fromEnvironment(
+  static const String wsBase = String.fromEnvironment(
     'WS_BASE_URL',
     defaultValue: 'ws://127.0.0.1:8000',
   );

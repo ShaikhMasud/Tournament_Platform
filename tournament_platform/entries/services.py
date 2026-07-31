@@ -1,6 +1,8 @@
 from django.db import transaction
 from rest_framework.exceptions import APIException, ValidationError
 
+from tournaments.models import Category
+
 from .models import Entry
 
 
@@ -35,15 +37,13 @@ def add_entry(*, category, player, actor) -> Entry:
     duplicate entry for the same player in a race.
     """
     with transaction.atomic():
-        locked_category = category.__class__.objects.select_for_update().get(
-            pk=category.pk
-        )
+        locked_category = Category.objects.select_for_update().get(pk=category.pk)
 
-        if locked_category.status != locked_category.Status.OPEN:
+        if locked_category.status != Category.OPEN:
             raise CategoryLocked()
 
         active_qs = Entry.objects.filter(
-            category=locked_category, status=Entry.Status.CONFIRMED
+            category=locked_category, status=Entry.CONFIRMED
         )
 
         if active_qs.filter(player=player).exists():
@@ -55,7 +55,7 @@ def add_entry(*, category, player, actor) -> Entry:
         entry = Entry.objects.create(
             category=locked_category,
             player=player,
-            status=Entry.Status.CONFIRMED,
+            status=Entry.CONFIRMED,
             created_by=actor,
         )
         return entry
@@ -68,13 +68,11 @@ def remove_entry(*, entry: Entry, actor) -> None:
     bracket slots stay meaningful.
     """
     category = entry.category
-    if category.status != category.Status.OPEN:
+    if category.status != Category.OPEN:
         raise DrawAlreadyFinalized()
 
     with transaction.atomic():
-        locked_category = category.__class__.objects.select_for_update().get(
-            pk=category.pk
-        )
-        if locked_category.status != locked_category.Status.OPEN:
+        locked_category = Category.objects.select_for_update().get(pk=category.pk)
+        if locked_category.status != Category.OPEN:
             raise DrawAlreadyFinalized()
         entry.delete()

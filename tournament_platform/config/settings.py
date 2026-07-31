@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     "entries",
     "draws",
     "matches",
+    "results",
     "core",
 ]
 
@@ -68,12 +69,8 @@ AUTH_USER_MODEL = "accounts.User"
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'tournament',
-        'USER': 'tournament',
-        'PASSWORD': 'tournament',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 
@@ -90,6 +87,8 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
+MEDIA_URL = "media/"
+MEDIA_ROOT = BASE_DIR / "media"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {

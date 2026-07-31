@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Match Results - {{ tournament.name }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 1.5cm;
+        }
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            font-size: 11pt;
+            line-height: 1.4;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #2563eb;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 22pt;
+            color: #1e40af;
+        }
+        .header .subtitle {
+            margin-top: 5px;
+            color: #6b7280;
+            font-size: 10pt;
+        }
+        .meta {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            font-size: 9pt;
+            color: #6b7280;
+        }
+        .stats {
+            background: #f3f4f6;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .stats span {
+            margin-right: 20px;
+        }
+        .category-section {
+            margin-bottom: 25px;
+            page-break-inside: avoid;
+        }
+        .category-title {
+            background: #2563eb;
+            color: white;
+            padding: 8px 12px;
+            font-size: 12pt;
+            font-weight: bold;
+            margin-bottom: 10px;
+            border-radius: 3px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+            font-size: 9pt;
+        }
+        th, td {
+            border: 1px solid #e5e7eb;
+            padding: 6px 8px;
+            text-align: left;
+        }
+        th {
+            background: #f9fafb;
+            font-weight: bold;
+            color: #374151;
+        }
+        tr:nth-child(even) {
+            background: #f9fafb;
+        }
+        .winner {
+            font-weight: bold;
+            color: #059669;
+        }
+        .score {
+            font-family: monospace;
+            font-weight: bold;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 10px;
+            border-top: 1px solid #e5e7eb;
+            font-size: 8pt;
+            color: #9ca3af;
+            text-align: center;
+        }
+        .badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 8pt;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .badge-final {
+            background: #d1fae5;
+            color: #059669;
+        }
+        .badge-sf {
+            background: #fef3c7;
+            color: #d97706;
+        }
+        .badge-qf {
+            background: #dbeafe;
+            color: #2563eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>{{ tournament.name }}</h1>
+        <div class="subtitle">
+            {% if tournament.sport %}
+                {{ tournament.sport|default:"Tournament" }}
+            {% endif %}
+            {% if tournament.starts_at %}
+                &mdash; {{ tournament.starts_at|date:"F j, Y" }}
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="meta">
+        <div>
+            <strong>Generated:</strong> {{ generated_at|date:"F j, Y H:i" }}
+        </div>
+        <div>
+            <strong>Total Matches:</strong> {{ total_matches }} |
+            <strong>Completed:</strong> {{ completed_matches }}
+        </div>
+    </div>
+
+    {% if matches %}
+        {% regroup matches by category as category_list %}
+        {% for category in category_list %}
+            <div class="category-section">
+                <div class="category-title">{{ category.grouper }}</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 5%">#</th>
+                            <th style="width: 35%">Player 1</th>
+                            <th style="width: 20%">Score</th>
+                            <th style="width: 35%">Player 2</th>
+                            <th style="width: 5%">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for match in category.list %}
+                            <tr>
+                                <td>
+                                    {% if match.round == 1 %}
+                                        R1-{{ match.slot|add:1 }}
+                                    {% elif match.round == 2 %}
+                                        <span class="badge badge-qf">QF</span>
+                                    {% elif match.round == 3 %}
+                                        <span class="badge badge-sf">SF</span>
+                                    {% else %}
+                                        <span class="badge badge-final">F</span>
+                                    {% endif %}
+                                </td>
+                                <td class="{% if match.winner and match.winner == match.entry1 %}winner{% endif %}">
+                                    {{ match.entry1|default:"BYE" }}
+                                </td>
+                                <td class="score">
+                                    {% if match.score.entry1_points is defined %}
+                                        {{ match.score.entry1_points }} - {{ match.score.entry2_points }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td class="{% if match.winner and match.winner == match.entry2 %}winner{% endif %}">
+                                    {{ match.entry2|default:"BYE" }}
+                                </td>
+                                <td>
+                                    {% if match.status == 'completed' %}
+                                        <span class="badge badge-final">Done</span>
+                                    {% else %}
+                                        {{ match.status|title }}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>No completed matches found.</p>
+    {% endif %}
+
+    <div class="footer">
+        This document was automatically generated. For the most up-to-date results,
+        please refer to the official tournament management system.
+    </div>
+</body>
+</html>
