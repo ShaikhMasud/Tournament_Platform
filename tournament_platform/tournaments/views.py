@@ -559,6 +559,9 @@ class TournamentViewSet(viewsets.ModelViewSet):
             Q(is_public=True) | Q(id__in=active_role_tournament_ids)
         ).select_related("organization", "created_by")
         
+        # Prefetch related data for detail view
+        queryset = queryset.prefetch_related("categories", "courts")
+        
         # Filter by status
         status_filter = self.request.query_params.get('status')
         if status_filter:
