@@ -87,6 +87,12 @@ class CourtCreateSerializer(serializers.ModelSerializer):
             'seating_capacity', 'is_active', 'is_available', 'notes',
             'opening_time', 'closing_time'
         ]
+    
+    def create(self, validated_data):
+        tournament = self.context.get('tournament')
+        if tournament:
+            validated_data['tournament'] = tournament
+        return super().create(validated_data)
 
 
 # =============================================================================
@@ -121,6 +127,12 @@ class CategoryCreateSerializer(serializers.ModelSerializer):
             'gender', 'min_age', 'max_age', 'status',
             'is_seeded', 'seed_count', 'entry_fee'
         ]
+    
+    def create(self, validated_data):
+        tournament = self.context.get('tournament')
+        if tournament:
+            validated_data['tournament'] = tournament
+        return super().create(validated_data)
 
 
 # =============================================================================
