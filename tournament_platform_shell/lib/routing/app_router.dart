@@ -20,6 +20,7 @@ import '../features/results/screens/results_screen.dart';
 import '../features/role_selector/screens/role_selector_screen.dart';
 import '../features/tournaments/screens/category_court_management_screen.dart';
 import '../features/roles/screens/tournament_roles_screen.dart';
+import '../features/organizers/screens/player_management_screen.dart';
 
 /// Route guarding lives here, not scattered through screens: every
 /// role-gated route (once added) should check auth state via this same
@@ -64,6 +65,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           final orgId = state.pathParameters['orgId']!;
           final orgName = state.uri.queryParameters['name'] ?? 'Organization';
           return AssistantManagementScreen(organizationId: orgId, organizationName: orgName);
+        },
+      ),
+      GoRoute(
+        path: '/organizer/organizations/:orgId/players',
+        builder: (context, state) {
+          final orgId = state.pathParameters['orgId']!;
+          final orgName = state.uri.queryParameters['name'] ?? 'Organization';
+          return PlayerManagementScreen(organizationId: orgId, organizationName: orgName);
         },
       ),
       GoRoute(

@@ -377,6 +377,11 @@ class _OrganizationCard extends StatelessWidget {
                       onPressed: () => context.go('/organizer/organizations/${organization.id}/assistants?name=${Uri.encodeComponent(organization.name)}'),
                     ),
                     ActionChip(
+                      avatar: const Icon(Icons.person_pin, size: 18),
+                      label: const Text('Players'),
+                      onPressed: () => context.go('/organizer/organizations/${organization.id}/players?name=${Uri.encodeComponent(organization.name)}'),
+                    ),
+                    ActionChip(
                       avatar: const Icon(Icons.manage_accounts, size: 18),
                       label: const Text('Team'),
                       onPressed: () => context.go('/organizer/organizations/${organization.id}/team?name=${Uri.encodeComponent(organization.name)}'),
