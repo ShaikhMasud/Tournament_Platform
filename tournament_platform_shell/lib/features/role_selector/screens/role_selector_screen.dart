@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../auth/models/session.dart';
 import '../../auth/providers/auth_providers.dart';
+import '../../organizations/providers/organizations_providers.dart';
 
 class RoleSelectorScreen extends ConsumerWidget {
   const RoleSelectorScreen({super.key});
@@ -144,6 +145,15 @@ class RoleSelectorScreen extends ConsumerWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.go('/player/home'),
           ),
+          // Organization/Tournament tile - only shown when no organizer roles
+          if (!roles.any((r) => r.isOrganizer))
+            _ActionTile(
+              icon: Icons.add_business,
+              iconColor: Colors.purple,
+              title: 'Create Organization',
+              subtitle: 'Start managing tournaments',
+              onTap: () => _showCreateOrganizationDialog(context, ref),
+            ),
           // Tournament roles
           for (final role in roles)
             _RoleTile(
@@ -172,6 +182,120 @@ class RoleSelectorScreen extends ConsumerWidget {
     final active = role.capabilities.where((c) => c.isActive).map((c) => c.capability).toList();
     if (active.isEmpty) return 'No capabilities granted yet';
     return active.join(', ').replaceAll('_', ' ');
+  }
+
+  void _showCreateOrganizationDialog(BuildContext context, WidgetRef ref) {
+    final nameController = TextEditingController();
+    String? errorText;
+    bool isSubmitting = false;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Create Organization'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'An organization groups your tournaments together.\n'
+              'You will become the owner and can create tournaments under it.',
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(
+                labelText: 'Organization name',
+                hintText: 'e.g., City Sports Club',
+                border: OutlineInputBorder(),
+              ),
+              autofocus: true,
+            ),
+            if (errorText != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                errorText!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: isSubmitting ? null : () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: isSubmitting
+                ? null
+                : () async {
+                    final name = nameController.text.trim();
+                    if (name.isEmpty) {
+                      setState(() => errorText = 'Please enter a name');
+                      return;
+                    }
+                    setState(() {
+                      isSubmitting = true;
+                      errorText = null;
+                    });
+                    try {
+                      await _createOrganization(ref, name);
+                      if (dialogContext.mounted) {
+                        Navigator.of(dialogContext).pop();
+                        // Show success and prompt to create tournament
+                        if (context.mounted) {
+                          _showCreateTournamentDialog(context, ref);
+                        }
+                      }
+                    } catch (e) {
+                      setState(() {
+                        isSubmitting = false;
+                        errorText = 'Failed to create: $e';
+                      });
+                    }
+                  },
+            child: isSubmitting
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('Create'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _createOrganization(WidgetRef ref, String name) async {
+    // Get the repository from providers
+    final repository = ref.read(organizationsRepositoryProvider);
+    await repository.createOrganization(name: name);
+  }
+
+  void _showCreateTournamentDialog(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('🎉 Organization Created!'),
+        content: const Text(
+          'Your organization has been created.\n\n'
+          'Go to the Organizer tab to create your first tournament.',
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              // Refresh session to show organizer role
+              ref.invalidate(authControllerProvider);
+              // Navigate to organizer home
+              context.go('/organizer/home');
+            },
+            child: const Text('Go to Organizer'),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -239,6 +363,75 @@ class _RoleTile extends StatelessWidget {
                 ),
               ),
               trailing,
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ActionTile extends StatelessWidget {
+  const _ActionTile({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: iconColor.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: iconColor),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.add_circle_outline,
+                color: Theme.of(context).colorScheme.primary,
+              ),
             ],
           ),
         ),
