@@ -80,6 +80,19 @@ class TournamentsRepository {
     return Category.fromJson(response.data as Map<String, dynamic>);
   }
 
+  /// GET /tournaments/{id}/categories/ — list all categories
+  Future<List<Category>> getCategories(String tournamentId) async {
+    final response = await _apiClient.dio.get(
+      ApiEndpoints.categories(tournamentId),
+    );
+    if (response.data is List) {
+      return (response.data as List)
+          .map((e) => Category.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    return [];
+  }
+
   Future<Court> createCourt({
     required String tournamentId,
     required String name,
@@ -89,6 +102,19 @@ class TournamentsRepository {
       data: {'name': name},
     );
     return Court.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  /// GET /tournaments/{id}/courts/ — list all courts
+  Future<List<Court>> getCourts(String tournamentId) async {
+    final response = await _apiClient.dio.get(
+      ApiEndpoints.courts(tournamentId),
+    );
+    if (response.data is List) {
+      return (response.data as List)
+          .map((e) => Court.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    return [];
   }
 
   /// GET /tournaments/{id}/roles/ — get tournament roles
