@@ -12,7 +12,8 @@ class Capability {
 class TournamentRoleSummary {
   TournamentRoleSummary({
     required this.id,
-    required this.userId,
+    required this.tournamentId,
+    required this.tournamentName,
     required this.userEmail,
     required this.role,
     required this.isActive,
@@ -20,7 +21,8 @@ class TournamentRoleSummary {
   });
 
   final String id;
-  final String userId;
+  final String tournamentId;
+  final String tournamentName;
   final String userEmail;
   final String role;
   final bool isActive;
@@ -29,9 +31,13 @@ class TournamentRoleSummary {
   bool get isOrganizer => role == 'organizer';
   bool get isAssistant => role == 'assistant';
 
+  bool hasCapability(String name) =>
+      capabilities.any((c) => c.capability == name && c.isActive);
+
   factory TournamentRoleSummary.fromJson(Map<String, dynamic> json) => TournamentRoleSummary(
         id: json['id'] as String,
-        userId: json['user_id'] as String,
+        tournamentId: json['tournament'] as String,
+        tournamentName: json['tournament_name'] as String,
         userEmail: json['user_email'] as String,
         role: json['role'] as String,
         isActive: json['is_active'] as bool,

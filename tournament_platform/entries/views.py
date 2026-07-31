@@ -65,7 +65,7 @@ class EntryListView(generics.ListAPIView):
         if _actor_is_privileged(self.request.user, tournament):
             return qs.order_by("-created_at")
 
-        player = getattr(self.request.user, "playerprofile", None)
+        player = self.request.user.player_profiles.first()
         if player is None:
             return qs.none()
         return qs.filter(player=player)
@@ -115,8 +115,9 @@ class EntryDeleteView(APIView):
         
         # Check if the request user is the owner of the player profile
         is_owner = False
-        if hasattr(request.user, 'playerprofile'):
-            is_owner = request.user.playerprofile.id == entry.player_id
+        user_player = request.user.player_profiles.first()
+        if user_player:
+            is_owner = user_player.id == entry.player_id
 
         if not (is_privileged or is_owner):
             raise PermissionDenied(

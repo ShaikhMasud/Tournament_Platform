@@ -127,7 +127,7 @@ class EntriesNotifier extends FamilyAsyncNotifier<EntriesListState, String> {
   /// never mutates the local list optimistically, since capacity/
   /// duplicate rules are enforced server-side and the list must stay
   /// authoritative.
-  Future<void> addEntry({int? playerId}) async {
+  Future<void> addEntry({String? playerId}) async {
     final repo = ref.read(entriesRepositoryProvider);
     await repo.addEntry(categoryId: categoryId, playerId: playerId);
     final current = state.value;

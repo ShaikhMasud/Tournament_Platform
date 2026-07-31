@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../models/draw.dart';
 import '../providers/draws_providers.dart';
 
 class DrawScreen extends ConsumerWidget {
@@ -72,13 +73,20 @@ class _NoDrawView extends StatelessWidget {
   }
 }
 
-class _DrawView extends ConsumerWidget {
+class _DrawView extends StatelessWidget {
   const _DrawView({required this.draw});
 
-  final dynamic draw;
+  final Draw draw;
+
+  int _calculateTotalRounds() {
+    if (draw.slots.isEmpty) return 0;
+    return draw.slots.map((s) => s.roundNumber).reduce((a, b) => a > b ? a : b);
+  }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
+    final totalRounds = _calculateTotalRounds();
+    
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -92,17 +100,17 @@ class _DrawView extends ConsumerWidget {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.info_outline),
+                      const Icon(Icons.layers),
                       const SizedBox(width: 8),
-                      Text('Format: ${draw.format}', style: const TextStyle(fontSize: 16)),
+                      Text('Total Rounds: $totalRounds', style: const TextStyle(fontSize: 16)),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      const Icon(Icons.layers),
+                      const Icon(Icons.account_tree),
                       const SizedBox(width: 8),
-                      Text('Total Rounds: ${draw.totalRounds}', style: const TextStyle(fontSize: 16)),
+                      Text('Slots: ${draw.slots.length}', style: const TextStyle(fontSize: 16)),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -128,7 +136,7 @@ class _DrawView extends ConsumerWidget {
     switch (status) {
       case 'pending':
         return Colors.orange.shade100;
-      case 'published':
+      case 'finalized':
         return Colors.green.shade100;
       default:
         return Colors.grey.shade200;

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/entries_repository.dart';
+import '../models/entry.dart';
 import '../providers/entries_providers.dart';
 import '../widgets/add_entry_dialog.dart';
 
@@ -36,6 +37,15 @@ class _EntryListScreenState extends ConsumerState<EntryListScreen> {
     _searchController.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  String _statusToString(EntryStatus status) {
+    switch (status) {
+      case EntryStatus.confirmed:
+        return 'confirmed';
+      case EntryStatus.unknown:
+        return 'unknown';
+    }
   }
 
   @override
@@ -103,7 +113,7 @@ class _EntryListScreenState extends ConsumerState<EntryListScreen> {
                       final entry = list.entries[index];
                       return ListTile(
                         title: Text(entry.playerDisplayName),
-                        subtitle: Text(entry.status.name),
+                        subtitle: Text(_statusToString(entry.status)),
                         trailing: canManage
                             ? IconButton(
                                 icon: const Icon(Icons.remove_circle_outline),
