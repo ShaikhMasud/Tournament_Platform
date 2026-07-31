@@ -65,7 +65,7 @@ class ApiClient {
     final refresh = await _tokenStorage.refreshToken;
     if (refresh == null) throw SessionExpiredException();
 
-    final response = await _refreshDio.post('/refresh', data: {'refresh': refresh});
+    final response = await _refreshDio.post('/auth/refresh/', data: {'refresh': refresh});
     final newAccess = response.data['access'] as String;
     await _tokenStorage.updateAccessToken(newAccess);
     return newAccess;

@@ -44,6 +44,9 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "config.urls"
 
+# Automatically add trailing slash to URLs
+APPEND_SLASH = True
+
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
