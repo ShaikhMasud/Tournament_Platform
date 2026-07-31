@@ -9,7 +9,7 @@ import '../providers/entries_providers.dart';
 /// For an Organizer/capable Assistant, this includes a player-id field
 /// (a real build would replace this with a typeahead search against a
 /// player-lookup endpoint — not specified in Phase 2's plan, so left as
-/// a plain numeric field with a TODO). A Player adding themselves needs
+/// a plain UUID text field with a TODO). A Player adding themselves needs
 /// no input at all; the server resolves them from the auth token.
 Future<void> showAddEntryDialog(
   BuildContext context,
@@ -37,9 +37,8 @@ Future<void> showAddEntryDialog(
                       labelText: 'Player ID',
                       // TODO: swap for a player search/typeahead once a
                       // player-lookup endpoint exists.
-                      helperText: 'Enter the player\'s id to add them',
+                      helperText: 'Enter the player\'s UUID to add them',
                     ),
-                    keyboardType: TextInputType.number,
                   ),
                 ] else ...[
                   const Text('This will add you to this category.'),
@@ -61,8 +60,8 @@ Future<void> showAddEntryDialog(
               FilledButton(
                 onPressed: () async {
                   try {
-                    final playerId = canManage
-                        ? int.tryParse(playerIdController.text.trim())
+                    final playerId = canManage && playerIdController.text.trim().isNotEmpty
+                        ? playerIdController.text.trim()
                         : null;
                     await ref
                         .read(entriesProvider(categoryId).notifier)

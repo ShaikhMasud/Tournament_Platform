@@ -143,8 +143,10 @@ class UpdateScoreRequest {
   final int version;
 
   Map<String, dynamic> toJson() => {
-        'entry1_points': entry1Points,
-        'entry2_points': entry2Points,
+        'score': {
+          'entry1_points': entry1Points,
+          'entry2_points': entry2Points,
+        },
         'version': version,
       };
 }

@@ -9,7 +9,6 @@ class EntrySerializer(serializers.ModelSerializer):
     """Read-only representation used by the list/detail endpoints."""
 
     player_display_name = serializers.SerializerMethodField()
-    player_id = serializers.UUIDField(source="player_id", read_only=True)
 
     class Meta:
         model = Entry
@@ -45,7 +44,7 @@ class EntryCreateSerializer(serializers.Serializer):
       before anything is created.
     """
 
-    player = serializers.IntegerField(required=False)
+    player = serializers.UUIDField(required=False)
 
     def validate(self, attrs):
         request = self.context["request"]
@@ -53,26 +52,38 @@ class EntryCreateSerializer(serializers.Serializer):
         actor = request.user
 
         is_privileged = self.context.get("actor_is_privileged", False)
+        player_id = attrs.get("player")
 
-        if is_privileged:
-            player_id = attrs.get("player")
-            if not player_id:
-                raise serializers.ValidationError(
-                    {"player": "player id is required when adding on someone else's behalf."}
-                )
+        if player_id:
+            # Explicit player ID provided - validate it exists
             try:
                 player = PlayerProfile.objects.get(pk=player_id)
             except PlayerProfile.DoesNotExist as exc:
                 raise serializers.ValidationError({"player": "No such player."}) from exc
-        else:
-            # Non-privileged callers can only enter themselves — 'player'
-            # in the request body is never trusted here.
+        elif is_privileged:
+            # Privileged caller without player ID - use their own profile
             try:
-                player = actor.playerprofile
-            except PlayerProfile.DoesNotExist as exc:
+                player = actor.player_profiles.first()
+            except Exception:
+                raise serializers.ValidationError(
+                    {"player": "You don't have a player profile to enter with."}
+                )
+            if not player:
+                raise serializers.ValidationError(
+                    {"player": "You don't have a player profile to enter with."}
+                )
+        else:
+            # Non-privileged callers must enter themselves
+            try:
+                player = actor.player_profiles.first()
+            except Exception:
                 raise serializers.ValidationError(
                     "You don't have a player profile to enter with."
-                ) from exc
+                )
+            if not player:
+                raise serializers.ValidationError(
+                    "You don't have a player profile to enter with."
+                )
 
         attrs["resolved_player"] = player
         attrs["resolved_category"] = category

@@ -63,7 +63,7 @@ class EntriesRepository {
   /// POST /api/categories/{id}/entries/add/
   /// Omit [playerId] to enter the caller's own player profile; pass it
   /// (Organizer/capable Assistant only) to add someone else.
-  Future<Entry> addEntry({required String categoryId, int? playerId}) async {
+  Future<Entry> addEntry({required String categoryId, String? playerId}) async {
     try {
       final response = await _apiClient.dio.post(
         '${ApiEndpoints.entries(categoryId)}add/',

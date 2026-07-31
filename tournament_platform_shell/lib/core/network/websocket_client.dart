@@ -30,7 +30,7 @@ class MatchSocketClient {
   Future<void> connect() async {
     _emit(SocketConnectionState.connecting);
     final token = await tokenStorage.accessToken;
-    final uri = Uri.parse('${ApiConfig.wsBaseUrl}/ws/matches/$matchId/?token=$token');
+    final uri = Uri.parse('${ApiConfig.wsBase}/ws/matches/$matchId/?token=$token');
 
     try {
       _channel = WebSocketChannel.connect(uri);

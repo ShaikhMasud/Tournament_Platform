@@ -36,11 +36,12 @@ class CapabilitySerializer(serializers.ModelSerializer):
 
 class TournamentRoleSerializer(serializers.ModelSerializer):
     tournament_name = serializers.CharField(source="tournament.name", read_only=True)
+    user_email = serializers.CharField(source="user.email", read_only=True)
     capabilities = CapabilitySerializer(many=True, read_only=True)
 
     class Meta:
         model = TournamentRole
-        fields = ["id", "tournament", "tournament_name", "role", "is_active", "capabilities"]
+        fields = ["id", "tournament", "tournament_name", "user_email", "role", "is_active", "capabilities"]
 
 
 class SessionSerializer(serializers.ModelSerializer):

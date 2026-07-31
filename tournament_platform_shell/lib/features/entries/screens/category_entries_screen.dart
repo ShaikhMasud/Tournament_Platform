@@ -217,6 +217,15 @@ class _EntryCard extends StatelessWidget {
   final Entry entry;
   final VoidCallback onDelete;
 
+  String _statusToString(EntryStatus status) {
+    switch (status) {
+      case EntryStatus.confirmed:
+        return 'CONFIRMED';
+      case EntryStatus.unknown:
+        return 'UNKNOWN';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -228,7 +237,7 @@ class _EntryCard extends StatelessWidget {
               : '?'),
         ),
         title: Text(entry.playerDisplayName),
-        subtitle: Text(entry.status.name.toUpperCase()),
+        subtitle: Text(_statusToString(entry.status)),
         trailing: IconButton(
           icon: const Icon(Icons.delete_outline),
           onPressed: onDelete,
