@@ -33,30 +33,52 @@ class Draw {
       );
 }
 
+class DrawEntry {
+  DrawEntry({
+    required this.id,
+    required this.displayName,
+    this.seed,
+  });
+
+  final String id;
+  final String displayName;
+  final int? seed;
+
+  factory DrawEntry.fromJson(Map<String, dynamic> json) => DrawEntry(
+        id: json['id'] as String,
+        displayName: json['display_name'] as String? ?? json['player_name'] as String? ?? 'Unknown',
+        seed: json['seed'] as int?,
+      );
+}
+
 class DrawSlot {
   DrawSlot({
     required this.id,
     required this.roundNumber,
-    required this.position,
-    this.entryId,
-    this.entryDisplayName,
-    required this.isBye,
+    required this.slotPosition,
+    this.entry1,
+    this.entry2,
+    this.winnerEntryId,
   });
 
   final String id;
   final int roundNumber;
-  final int position;
-  final String? entryId;
-  final String? entryDisplayName;
-  final bool isBye;
+  final int slotPosition;
+  final DrawEntry? entry1;
+  final DrawEntry? entry2;
+  final String? winnerEntryId;
 
   factory DrawSlot.fromJson(Map<String, dynamic> json) => DrawSlot(
         id: json['id'] as String,
         roundNumber: json['round_number'] as int,
-        position: json['position'] as int,
-        entryId: json['entry_id'] as String?,
-        entryDisplayName: json['entry_display_name'] as String?,
-        isBye: json['is_bye'] as bool,
+        slotPosition: json['slot_position'] as int,
+        entry1: json['entry1'] != null
+            ? DrawEntry.fromJson(json['entry1'] as Map<String, dynamic>)
+            : null,
+        entry2: json['entry2'] != null
+            ? DrawEntry.fromJson(json['entry2'] as Map<String, dynamic>)
+            : null,
+        winnerEntryId: json['winner_entry_id'] as String?,
       );
 }
 
