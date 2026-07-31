@@ -92,10 +92,8 @@ class RoleSelectorScreen extends ConsumerWidget {
                   subtitle: hasOrganizerRole
                       ? 'Manage tournaments (${roles.where((r) => r.isOrganizer).length} tournaments)'
                       : 'Create and manage tournaments',
-                  isAvailable: hasOrganizerRole,
-                  onTap: hasOrganizerRole
-                      ? () => context.go('/organizer/home')
-                      : null,
+                  badge: hasOrganizerRole ? '${roles.where((r) => r.isOrganizer).length}' : null,
+                  onTap: () => context.go('/organizer/home'),
                 ),
               ),
 
@@ -110,10 +108,16 @@ class RoleSelectorScreen extends ConsumerWidget {
                   subtitle: hasAssistantRole
                       ? 'Help manage tournaments (${roles.where((r) => r.isAssistant).length} assignments)'
                       : 'Get invited by an organizer',
-                  isAvailable: hasAssistantRole,
-                  onTap: hasAssistantRole
-                      ? () => _showAssistantTournamentPicker(context, ref, roles.where((r) => r.isAssistant).toList())
-                      : null,
+                  badge: hasAssistantRole ? '${roles.where((r) => r.isAssistant).length}' : null,
+                  onTap: () {
+                    if (hasAssistantRole) {
+                      _showAssistantTournamentPicker(context, ref, roles.where((r) => r.isAssistant).toList());
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('No tournament assignments yet. Ask an organizer to invite you.')),
+                      );
+                    }
+                  },
                 ),
               ),
 
@@ -175,7 +179,7 @@ class _RoleCard extends StatelessWidget {
     required this.color,
     required this.title,
     required this.subtitle,
-    required this.isAvailable,
+    this.badge,
     required this.onTap,
   });
 
@@ -183,16 +187,15 @@ class _RoleCard extends StatelessWidget {
   final Color color;
   final String title;
   final String subtitle;
-  final bool isAvailable;
-  final VoidCallback? onTap;
+  final String? badge; // If provided, shows a count badge
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Card(
-      elevation: isAvailable ? 2 : 0,
-      color: isAvailable ? null : colorScheme.surfaceContainerHighest.withOpacity(0.5),
+      elevation: 2,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
@@ -204,12 +207,12 @@ class _RoleCard extends StatelessWidget {
                 width: 56,
                 height: 56,
                 decoration: BoxDecoration(
-                  color: isAvailable ? color.withOpacity(0.15) : Colors.grey.withOpacity(0.15),
+                  color: color.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Icon(
                   icon,
-                  color: isAvailable ? color : Colors.grey,
+                  color: color,
                   size: 28,
                 ),
               ),
@@ -219,12 +222,33 @@ class _RoleCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      title,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: isAvailable ? null : colorScheme.onSurfaceVariant,
+                    Row(
+                      children: [
+                        Text(
+                          title,
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                        if (badge != null) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: color.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              badge!,
+                              style: TextStyle(
+                                color: color,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
                           ),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -239,10 +263,7 @@ class _RoleCard extends StatelessWidget {
                   ],
                 ),
               ),
-              if (isAvailable)
-                Icon(Icons.chevron_right, color: colorScheme.primary)
-              else
-                Icon(Icons.lock_outline, color: colorScheme.onSurfaceVariant),
+              Icon(Icons.chevron_right, color: colorScheme.primary),
             ],
           ),
         ),
