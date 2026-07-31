@@ -52,7 +52,7 @@ class MatchesListScreen extends ConsumerWidget {
                 final match = matches[index];
                 return _MatchCard(
                   match: match,
-                  onTap: () => context.push('/matches/${match.id}'),
+                  onTap: () => context.push('/matches/${match.id}/live'),
                 );
               },
             ),
