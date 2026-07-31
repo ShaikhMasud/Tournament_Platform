@@ -64,14 +64,14 @@ class _CategoryCourtManagementScreenState extends ConsumerState<CategoryCourtMan
   }
 }
 
-class _CategoriesTab extends StatelessWidget {
+class _CategoriesTab extends ConsumerWidget {
   const _CategoriesTab({required this.tournament, required this.tournamentId});
 
   final Tournament tournament;
   final String tournamentId;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
