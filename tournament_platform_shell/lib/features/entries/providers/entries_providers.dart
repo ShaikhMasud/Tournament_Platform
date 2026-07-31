@@ -166,3 +166,12 @@ final entriesProvider =
     AsyncNotifierProvider.family<EntriesNotifier, EntriesListState, String>(
   EntriesNotifier.new,
 );
+
+/// Whether the current selected role can manage entries (organizers and
+/// assistants with entry_management capability).
+final canManageEntriesProvider = Provider<bool>((ref) {
+  final selectedRole = ref.watch(selectedRoleProvider);
+  if (selectedRole == null) return false;
+  if (selectedRole.isOrganizer) return true;
+  return selectedRole.capabilities.any((c) => c.capability == 'entry_management' && c.isActive);
+});

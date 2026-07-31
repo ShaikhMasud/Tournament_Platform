@@ -8,7 +8,7 @@ import '../widgets/add_entry_dialog.dart';
 class EntryListScreen extends ConsumerStatefulWidget {
   const EntryListScreen({super.key, required this.categoryId});
 
-  final int categoryId;
+  final String categoryId;
 
   @override
   ConsumerState<EntryListScreen> createState() => _EntryListScreenState();
@@ -122,7 +122,7 @@ class _EntryListScreenState extends ConsumerState<EntryListScreen> {
     );
   }
 
-  void _confirmRemove(int entryId) async {
+  void _confirmRemove(String entryId) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
