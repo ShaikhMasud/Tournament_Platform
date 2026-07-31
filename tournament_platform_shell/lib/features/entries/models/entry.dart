@@ -10,9 +10,9 @@ EntryStatus _statusFromJson(String raw) {
 }
 
 class Entry {
-  final int id;
-  final int categoryId;
-  final int playerId;
+  final String id;
+  final String categoryId;
+  final String playerId;
   final String playerDisplayName;
   final EntryStatus status;
   final DateTime createdAt;
@@ -27,9 +27,9 @@ class Entry {
   });
 
   factory Entry.fromJson(Map<String, dynamic> json) => Entry(
-        id: json['id'] as int,
-        categoryId: json['category'] as int,
-        playerId: json['player_id'] as int,
+        id: json['id'] as String,
+        categoryId: json['category'] as String,
+        playerId: json['player_id'] as String,
         playerDisplayName: json['player_display_name'] as String,
         status: _statusFromJson(json['status'] as String),
         createdAt: DateTime.parse(json['created_at'] as String),

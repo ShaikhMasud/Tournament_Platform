@@ -1,10 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/network/api_client_provider.dart';
-// TODO: point this at your actual auth session provider file/name —
-// this assumes a provider called `authSessionProvider` exposing
-// AsyncValue<Session> with `activeRole` and `capabilities` fields, per
-// the Flutter README's description of GET /api/auth/session.
 import '../../auth/providers/auth_providers.dart';
 import '../data/entries_repository.dart';
 import '../models/entry.dart';
@@ -12,21 +7,6 @@ import '../models/entry.dart';
 final entriesRepositoryProvider = Provider<EntriesRepository>(
   (ref) => EntriesRepository(ref.watch(apiClientProvider)),
 );
-
-/// UX-only convenience flag: whether to show add/remove controls for
-/// entries. This does NOT gate anything security-relevant — the server
-/// re-checks every add/remove request regardless of what the client
-/// shows. Adjust the session-field names below (activeRole /
-/// capabilities) to match your real auth_providers.dart session model —
-/// this assumes GET /api/auth/session's shape as described in the
-/// Flutter README.
-final canManageEntriesProvider = Provider<bool>((ref) {
-  final session = ref.watch(authSessionProvider).valueOrNull;
-  if (session == null) return false;
-  return session.activeRole == 'organizer' ||
-      (session.activeRole == 'assistant' &&
-          session.capabilities.contains('entry_management'));
-});
 
 class EntriesListState {
   final List<Entry> entries;
@@ -71,11 +51,11 @@ class EntriesListState {
 
 /// One notifier per category id — holds the current page, search query,
 /// and entry list for that category's roster.
-class EntriesNotifier extends FamilyAsyncNotifier<EntriesListState, int> {
-  int get categoryId => arg;
+class EntriesNotifier extends FamilyAsyncNotifier<EntriesListState, String> {
+  String get categoryId => arg;
 
   @override
-  Future<EntriesListState> build(int categoryId) async {
+  Future<EntriesListState> build(String categoryId) async {
     return _fetchFirstPage();
   }
 
@@ -159,7 +139,7 @@ class EntriesNotifier extends FamilyAsyncNotifier<EntriesListState, int> {
     );
   }
 
-  Future<void> removeEntry(int entryId) async {
+  Future<void> removeEntry(String entryId) async {
     final repo = ref.read(entriesRepositoryProvider);
     await repo.removeEntry(entryId);
     final current = state.value;
@@ -173,6 +153,6 @@ class EntriesNotifier extends FamilyAsyncNotifier<EntriesListState, int> {
 }
 
 final entriesProvider =
-    AsyncNotifierProvider.family<EntriesNotifier, EntriesListState, int>(
+    AsyncNotifierProvider.family<EntriesNotifier, EntriesListState, String>(
   EntriesNotifier.new,
 );

@@ -28,4 +28,27 @@ class ApiEndpoints {
       '/tournaments/$tournamentId/courts/';
   static String court(String tournamentId, String courtId) =>
       '/tournaments/$tournamentId/courts/$courtId/';
+
+  // --- Entries ---
+  static String entries(String categoryId) => '/categories/$categoryId/entries/';
+  static String entry(String entryId) => '/entries/$entryId/';
+
+  // --- Draws ---
+  static String drawGenerate(String categoryId) => '/categories/$categoryId/draw/generate/';
+  static String draw(String categoryId) => '/categories/$categoryId/draw/';
+
+  // --- Matches ---
+  static String matches(String tournamentId) => '/tournaments/$tournamentId/matches/';
+  static String match(String matchId) => '/matches/$matchId/';
+  static String matchSchedule(String matchId) => '/matches/$matchId/schedule/';
+  static String matchStart(String matchId) => '/matches/$matchId/start/';
+  static String matchScore(String matchId) => '/matches/$matchId/score/';
+
+  // --- Results ---
+  static String tournamentResults(String tournamentId) => '/tournaments/$tournamentId/results/pdf/';
+  static String resultStatus(String docId) => '/results/$docId/status/';
+  static String resultDownload(String docId) => '/results/$docId/download/';
+
+  // --- WebSocket ---
+  static String matchWebSocket(String matchId) => '/ws/matches/$matchId/';
 }

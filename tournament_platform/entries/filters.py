@@ -4,7 +4,7 @@ from .models import Entry
 
 
 class EntryFilter(django_filters.FilterSet):
-    status = django_filters.ChoiceFilter(choices=Entry.Status.choices)
+    status = django_filters.ChoiceFilter(choices=Entry.STATUS_CHOICES)
     search = django_filters.CharFilter(method="filter_search")
 
     class Meta:
@@ -12,9 +12,6 @@ class EntryFilter(django_filters.FilterSet):
         fields = ["status"]
 
     def filter_search(self, queryset, name, value):
-        # Matches against the player's display name / underlying user
-        # name fields — adjust the lookup paths to whatever PlayerProfile
-        # actually exposes (display_name vs user__first_name, etc.).
         return queryset.filter(
             player__display_name__icontains=value
         ) | queryset.filter(
