@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../auth/providers/auth_providers.dart';
 import '../../organizations/providers/organizations_providers.dart';
 import '../../organizations/models/organization.dart';
 import '../../tournaments/data/tournaments_repository.dart';
