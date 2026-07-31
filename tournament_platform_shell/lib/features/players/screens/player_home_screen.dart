@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../providers/player_providers.dart';
+import 'tournament_browse_screen.dart';
+import 'leaderboard_screen.dart';
 
 class PlayerHomeScreen extends ConsumerWidget {
   const PlayerHomeScreen({super.key});
@@ -14,195 +16,362 @@ class PlayerHomeScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Tournaments'),
+        title: const Text('Player Dashboard'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go('/'),
         ),
-      ),
-      body: tournamentsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Failed to load tournaments: $err'),
-              const SizedBox(height: 8),
-              ElevatedButton(
-                onPressed: () => ref.invalidate(playerTournamentsProvider),
-                child: const Text('Retry'),
-              ),
-            ],
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.leaderboard),
+            onPressed: () => _showTournamentPicker(context, ref),
+            tooltip: 'Leaderboard',
           ),
-        ),
-        data: (tournaments) {
-          if (tournaments.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
+        ],
+      ),
+      body: Column(
+        children: [
+          // Quick Actions
+          Container(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _QuickActionCard(
+                    icon: Icons.search,
+                    label: 'Browse\nTournaments',
+                    onTap: () => context.push('/player/browse'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _QuickActionCard(
+                    icon: Icons.emoji_events,
+                    label: 'My\nEntries',
+                    onTap: null,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _QuickActionCard(
+                    icon: Icons.schedule,
+                    label: 'Match\nSchedule',
+                    onTap: null,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(),
+          // My Tournaments
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                Text(
+                  'My Tournaments',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                const Spacer(),
+                TextButton(
+                  onPressed: () => context.push('/player/browse'),
+                  child: const Text('Browse More'),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: tournamentsAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, _) => Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        color: colorScheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Icon(
-                        Icons.sports_tennis,
-                        size: 40,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'No Tournament Entries',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
+                    Text('Failed to load tournaments: $err'),
                     const SizedBox(height: 8),
-                    Text(
-                      'You are not registered in any tournaments yet.\nAsk an organizer to add you to a tournament.',
-                      style: TextStyle(color: colorScheme.onSurfaceVariant),
-                      textAlign: TextAlign.center,
+                    ElevatedButton(
+                      onPressed: () => ref.invalidate(playerTournamentsProvider),
+                      child: const Text('Retry'),
                     ),
                   ],
                 ),
               ),
-            );
-          }
-
-          return RefreshIndicator(
-            onRefresh: () async {
-              ref.invalidate(playerTournamentsProvider);
-            },
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: tournaments.length,
-              itemBuilder: (context, index) {
-                final tournament = tournaments[index];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: InkWell(
-                    onTap: () {
-                      if (tournament.nextMatchId != null) {
-                        context.push('/matches/${tournament.nextMatchId}/live');
-                      }
-                    },
-                    borderRadius: BorderRadius.circular(12),
+              data: (tournaments) {
+                if (tournaments.isEmpty) {
+                  return Center(
                     child: Padding(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(32),
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Row(
-                            children: [
-                              Container(
-                                width: 48,
-                                height: 48,
-                                decoration: BoxDecoration(
-                                  color: Colors.green.withOpacity(0.15),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: const Icon(
-                                  Icons.emoji_events,
-                                  color: Colors.green,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      tournament.name,
-                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                    ),
-                                    Text(
-                                      tournament.categoryName,
-                                      style: TextStyle(color: colorScheme.onSurfaceVariant),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              _StatusChip(status: tournament.entryStatus),
-                            ],
+                          Icon(
+                            Icons.sports_tennis,
+                            size: 64,
+                            color: colorScheme.onSurfaceVariant,
                           ),
-                          const SizedBox(height: 12),
-                          const Divider(),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'No Tournament Entries',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
                           const SizedBox(height: 8),
-                          // Next match info
-                          if (tournament.nextMatchId != null) ...[
-                            Row(
-                              children: [
-                                Icon(Icons.play_circle_outline, size: 20, color: colorScheme.primary),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Next Match',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    color: colorScheme.primary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            if (tournament.nextMatchTime != null)
-                              Row(
-                                children: [
-                                  Icon(Icons.access_time, size: 16, color: colorScheme.onSurfaceVariant),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    _formatDateTime(tournament.nextMatchTime!),
-                                    style: TextStyle(color: colorScheme.onSurfaceVariant),
-                                  ),
-                                ],
-                              ),
-                            if (tournament.nextMatchCourt != null) ...[
-                              const SizedBox(height: 2),
-                              Row(
-                                children: [
-                                  Icon(Icons.location_on, size: 16, color: colorScheme.onSurfaceVariant),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    tournament.nextMatchCourt!,
-                                    style: TextStyle(color: colorScheme.onSurfaceVariant),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ] else ...[
-                            Row(
-                              children: [
-                                Icon(Icons.hourglass_empty, size: 16, color: colorScheme.onSurfaceVariant),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'No upcoming matches scheduled',
-                                  style: TextStyle(color: colorScheme.onSurfaceVariant),
-                                ),
-                              ],
-                            ),
-                          ],
+                          Text(
+                            'Browse and register for tournaments',
+                            style: TextStyle(color: colorScheme.onSurfaceVariant),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 16),
+                          FilledButton.icon(
+                            onPressed: () => context.push('/player/browse'),
+                            icon: const Icon(Icons.search),
+                            label: const Text('Browse Tournaments'),
+                          ),
                         ],
                       ),
                     ),
+                  );
+                }
+
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    ref.invalidate(playerTournamentsProvider);
+                  },
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: tournaments.length,
+                    itemBuilder: (context, index) {
+                      final tournament = tournaments[index];
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        child: InkWell(
+                          onTap: () => _showTournamentActions(context, ref, tournament),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      width: 48,
+                                      height: 48,
+                                      decoration: BoxDecoration(
+                                        color: Colors.green.withOpacity(0.15),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: const Icon(
+                                        Icons.emoji_events,
+                                        color: Colors.green,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            tournament.name,
+                                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                          ),
+                                          Text(
+                                            tournament.categoryName,
+                                            style: TextStyle(color: colorScheme.onSurfaceVariant),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    _StatusChip(status: tournament.entryStatus),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                const Divider(),
+                                const SizedBox(height: 8),
+                                // Quick actions
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                  children: [
+                                    _MiniAction(
+                                      icon: Icons.account_tree,
+                                      label: 'Draw',
+                                      onTap: () {
+                                        // View draw
+                                      },
+                                    ),
+                                    _MiniAction(
+                                      icon: Icons.leaderboard,
+                                      label: 'Standings',
+                                      onTap: () {
+                                        context.push('/player/leaderboard/${tournament.tournamentId}?name=${Uri.encodeComponent(tournament.name)}');
+                                      },
+                                    ),
+                                    _MiniAction(
+                                      icon: Icons.picture_as_pdf,
+                                      label: 'Results',
+                                      onTap: () {
+                                        context.push('/tournaments/${tournament.tournamentId}/results');
+                                      },
+                                    ),
+                                    if (tournament.nextMatchId != null)
+                                      _MiniAction(
+                                        icon: Icons.play_circle,
+                                        label: 'Live',
+                                        color: Colors.red,
+                                        onTap: () {
+                                          context.push('/matches/${tournament.nextMatchId}/live');
+                                        },
+                                      ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 );
               },
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }
 
-  String _formatDateTime(DateTime dt) {
-    return '${dt.day}/${dt.month}/${dt.year} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+  void _showTournamentActions(BuildContext context, WidgetRef ref, dynamic tournament) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              tournament.name,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            Text(tournament.categoryName),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const Icon(Icons.account_tree),
+              title: const Text('View Draw'),
+              onTap: () => Navigator.pop(context),
+            ),
+            ListTile(
+              leading: const Icon(Icons.leaderboard),
+              title: const Text('Leaderboard'),
+              onTap: () {
+                Navigator.pop(context);
+                context.push('/player/leaderboard/${tournament.tournamentId}?name=${Uri.encodeComponent(tournament.name)}');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.picture_as_pdf),
+              title: const Text('Results'),
+              onTap: () {
+                Navigator.pop(context);
+                context.push('/tournaments/${tournament.tournamentId}/results');
+              },
+            ),
+            if (tournament.nextMatchId != null)
+              ListTile(
+                leading: const Icon(Icons.play_circle, color: Colors.red),
+                title: const Text('Live Match'),
+                onTap: () {
+                  Navigator.pop(context);
+                  context.push('/matches/${tournament.nextMatchId}/live');
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showTournamentPicker(BuildContext context, WidgetRef ref) {
+    // TODO: Show tournament picker for leaderboard
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Select a tournament to view leaderboard')),
+    );
+  }
+}
+
+class _QuickActionCard extends StatelessWidget {
+  const _QuickActionCard({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Card(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: colorScheme.primary),
+              const SizedBox(height: 8),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MiniAction extends StatelessWidget {
+  const _MiniAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.all(8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 20, color: color),
+            const SizedBox(height: 4),
+            Text(label, style: const TextStyle(fontSize: 10)),
+          ],
+        ),
+      ),
+    );
   }
 }
 

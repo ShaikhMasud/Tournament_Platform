@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../auth/models/session.dart';
 import '../../auth/providers/auth_providers.dart';
-import '../../organizations/providers/organizations_providers.dart';
 
 class RoleSelectorScreen extends ConsumerWidget {
   const RoleSelectorScreen({super.key});
@@ -19,64 +18,12 @@ class RoleSelectorScreen extends ConsumerWidget {
     }
 
     final roles = session.tournamentRoles;
-
-    // Empty state: only when no player profiles and no roles
-    // (Normally signup creates a player profile, so this is rare)
-    if (session.playerProfiles.isEmpty && roles.isEmpty) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('Tournament Ops'),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.logout),
-              onPressed: () => ref.read(authControllerProvider.notifier).logout(),
-            ),
-          ],
-        ),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Icon(
-                    Icons.sports_tennis,
-                    size: 40,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  'No Tournament Access Yet',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  "You don't have any tournament access yet.\n"
-                  "Ask an organizer to register you as a player, or to invite you as an assistant.",
-                  style: TextStyle(color: colorScheme.onSurfaceVariant),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
+    final hasOrganizerRole = roles.any((r) => r.isOrganizer);
+    final hasAssistantRole = roles.any((r) => r.isAssistant);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Choose where to go'),
+        title: const Text('Tournament Platform'),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
@@ -84,354 +31,218 @@ class RoleSelectorScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // User info header
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: colorScheme.primaryContainer.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  backgroundColor: colorScheme.primary,
-                  child: Text(
-                    session.email[0].toUpperCase(),
-                    style: TextStyle(color: colorScheme.onPrimary),
-                  ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Header
+              const SizedBox(height: 32),
+              Icon(
+                Icons.sports_tennis,
+                size: 64,
+                color: colorScheme.primary,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Welcome!',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                session.email,
+                style: TextStyle(color: colorScheme.onSurfaceVariant),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 48),
+
+              // Role Selection
+              Text(
+                'Select your role',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              const SizedBox(height: 16),
+
+              // Player Role - Always available
+              Expanded(
+                child: _RoleCard(
+                  icon: Icons.person,
+                  color: Colors.green,
+                  title: 'Player',
+                  subtitle: 'Register for tournaments and view draws',
+                  isAvailable: true,
+                  onTap: () => context.go('/player/home'),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        session.email,
-                        style: Theme.of(context).textTheme.titleSmall,
-                      ),
-                      Text(
-                        '${session.playerProfiles.length} player profile${session.playerProfiles.length != 1 ? 's' : ''}',
-                        style: TextStyle(
-                          color: colorScheme.onSurfaceVariant,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // Organizer Role
+              Expanded(
+                child: _RoleCard(
+                  icon: Icons.admin_panel_settings,
+                  color: Colors.purple,
+                  title: 'Organizer',
+                  subtitle: hasOrganizerRole
+                      ? 'Manage tournaments (${roles.where((r) => r.isOrganizer).length} tournaments)'
+                      : 'Create and manage tournaments',
+                  isAvailable: hasOrganizerRole,
+                  onTap: hasOrganizerRole
+                      ? () => context.go('/organizer/home')
+                      : null,
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'Your Roles',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
+              ),
+
+              const SizedBox(height: 12),
+
+              // Assistant Role
+              Expanded(
+                child: _RoleCard(
+                  icon: Icons.badge,
+                  color: Colors.blue,
+                  title: 'Assistant',
+                  subtitle: hasAssistantRole
+                      ? 'Help manage tournaments (${roles.where((r) => r.isAssistant).length} assignments)'
+                      : 'Get invited by an organizer',
+                  isAvailable: hasAssistantRole,
+                  onTap: hasAssistantRole
+                      ? () => _showAssistantTournamentPicker(context, ref, roles.where((r) => r.isAssistant).toList())
+                      : null,
                 ),
+              ),
+
+              const SizedBox(height: 24),
+            ],
           ),
-          const SizedBox(height: 12),
-          // Player tile - always accessible for signed up users
-          _RoleTile(
-            icon: Icons.sports_tennis,
-            iconColor: Colors.green,
-            title: 'Player',
-            subtitle: session.playerProfiles.isEmpty
-                ? 'No tournament entries yet'
-                : '${session.playerProfiles.length} entr'
-                    '${session.playerProfiles.length == 1 ? "y" : "ies"}',
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.go('/player/home'),
-          ),
-          // Organization/Tournament tile - only shown when no organizer roles
-          if (!roles.any((r) => r.isOrganizer))
-            _ActionTile(
-              icon: Icons.add_business,
-              iconColor: Colors.purple,
-              title: 'Create Organization',
-              subtitle: 'Start managing tournaments',
-              onTap: () => _showCreateOrganizationDialog(context, ref),
-            ),
-          // Tournament roles
-          for (final role in roles)
-            _RoleTile(
-              icon: role.isOrganizer ? Icons.admin_panel_settings : Icons.badge,
-              iconColor: role.isOrganizer ? Colors.purple : Colors.blue,
-              title: '${role.isOrganizer ? "Organizer" : "Assistant"}',
-              subtitle: role.isOrganizer
-                  ? 'Full tournament management'
-                  : _capabilitySummary(role),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                ref.read(selectedRoleProvider.notifier).state = role;
-                if (role.isOrganizer) {
-                  context.go('/organizer/home');
-                } else {
-                  context.go('/assistant/tournaments/${role.tournamentId}?name=${Uri.encodeComponent(role.tournamentName)}');
-                }
-              },
-            ),
-        ],
+        ),
       ),
     );
   }
 
-  String _capabilitySummary(TournamentRoleSummary role) {
-    final active = role.capabilities.where((c) => c.isActive).map((c) => c.capability).toList();
-    if (active.isEmpty) return 'No capabilities granted yet';
-    return active.join(', ').replaceAll('_', ' ');
-  }
+  void _showAssistantTournamentPicker(
+    BuildContext context,
+    WidgetRef ref,
+    List<TournamentRoleSummary> assistantRoles,
+  ) {
+    if (assistantRoles.length == 1) {
+      // Only one tournament, go directly
+      final role = assistantRoles.first;
+      context.go('/assistant/tournaments/${role.tournamentId}?name=${Uri.encodeComponent(role.tournamentName)}');
+      return;
+    }
 
-  void _showCreateOrganizationDialog(BuildContext context, WidgetRef ref) {
-    final nameController = TextEditingController();
-    String? errorText;
-    bool isSubmitting = false;
-
-    showDialog(
+    // Show picker dialog
+    showModalBottomSheet(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Create Organization'),
-        content: Column(
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'An organization groups your tournaments together.\n'
-              'You will become the owner and can create tournaments under it.',
+            Text(
+              'Select Tournament',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: 16),
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(
-                labelText: 'Organization name',
-                hintText: 'e.g., City Sports Club',
-                border: OutlineInputBorder(),
-              ),
-              autofocus: true,
-            ),
-            if (errorText != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                errorText!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
-            ],
+            ...assistantRoles.map((role) => ListTile(
+                  leading: const Icon(Icons.sports_tennis),
+                  title: Text(role.tournamentName),
+                  subtitle: Text(role.capabilities.map((c) => c.capability).join(', ')),
+                  onTap: () {
+                    Navigator.pop(context);
+                    context.go('/assistant/tournaments/${role.tournamentId}?name=${Uri.encodeComponent(role.tournamentName)}');
+                  },
+                )),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: isSubmitting ? null : () => Navigator.of(dialogContext).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: isSubmitting
-                ? null
-                : () async {
-                    final name = nameController.text.trim();
-                    if (name.isEmpty) {
-                      setState(() => errorText = 'Please enter a name');
-                      return;
-                    }
-                    setState(() {
-                      isSubmitting = true;
-                      errorText = null;
-                    });
-                    try {
-                      await _createOrganization(ref, name);
-                      if (dialogContext.mounted) {
-                        Navigator.of(dialogContext).pop();
-                        // Show success and prompt to create tournament
-                        if (context.mounted) {
-                          _showCreateTournamentDialog(context, ref);
-                        }
-                      }
-                    } catch (e) {
-                      setState(() {
-                        isSubmitting = false;
-                        errorText = 'Failed to create: $e';
-                      });
-                    }
-                  },
-            child: isSubmitting
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Create'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _createOrganization(WidgetRef ref, String name) async {
-    // Get the repository from providers
-    final repository = ref.read(organizationsRepositoryProvider);
-    await repository.createOrganization(name: name);
-  }
-
-  void _showCreateTournamentDialog(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('🎉 Organization Created!'),
-        content: const Text(
-          'Your organization has been created.\n\n'
-          'Go to the Organizer tab to create your first tournament.',
-        ),
-        actions: [
-          FilledButton(
-            onPressed: () {
-              Navigator.of(dialogContext).pop();
-              // Refresh session to show organizer role
-              ref.invalidate(authControllerProvider);
-              // Navigate to organizer home
-              context.go('/organizer/home');
-            },
-            child: const Text('Go to Organizer'),
-          ),
-        ],
       ),
     );
   }
 }
 
-class _RoleTile extends StatelessWidget {
-  const _RoleTile({
+class _RoleCard extends StatelessWidget {
+  const _RoleCard({
     required this.icon,
-    required this.iconColor,
+    required this.color,
     required this.title,
     required this.subtitle,
-    required this.trailing,
+    required this.isAvailable,
     required this.onTap,
   });
 
   final IconData icon;
-  final Color iconColor;
+  final Color color;
   final String title;
   final String subtitle;
-  final Widget trailing;
+  final bool isAvailable;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final isLocked = onTap == null;
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      elevation: isAvailable ? 2 : 0,
+      color: isAvailable ? null : colorScheme.surfaceContainerHighest.withOpacity(0.5),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(20),
           child: Row(
             children: [
               Container(
-                width: 48,
-                height: 48,
+                width: 56,
+                height: 56,
                 decoration: BoxDecoration(
-                  color: iconColor.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(12),
+                  color: isAvailable ? color.withOpacity(0.15) : Colors.grey.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                child: Icon(icon, color: iconColor),
+                child: Icon(
+                  icon,
+                  color: isAvailable ? color : Colors.grey,
+                  size: 28,
+                ),
               ),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
                       title,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: isLocked ? colorScheme.onSurfaceVariant : null,
+                            fontWeight: FontWeight.bold,
+                            color: isAvailable ? null : colorScheme.onSurfaceVariant,
                           ),
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 4),
                     Text(
                       subtitle,
                       style: TextStyle(
                         color: colorScheme.onSurfaceVariant,
                         fontSize: 13,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
-              trailing,
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ActionTile extends StatelessWidget {
-  const _ActionTile({
-    required this.icon,
-    required this.iconColor,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final Color iconColor;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: iconColor.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: iconColor),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(
-                Icons.add_circle_outline,
-                color: Theme.of(context).colorScheme.primary,
-              ),
+              if (isAvailable)
+                Icon(Icons.chevron_right, color: colorScheme.primary)
+              else
+                Icon(Icons.lock_outline, color: colorScheme.onSurfaceVariant),
             ],
           ),
         ),

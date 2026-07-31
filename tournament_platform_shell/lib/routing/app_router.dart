@@ -1,21 +1,25 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:tournament_platform/features/assistants/screens/assistant_home_screen.dart';
-import 'package:tournament_platform/features/players/screens/player_home_screen.dart';
-import 'package:tournament_platform/features/roles/screens/tournament_roles_screen.dart';
-import 'package:tournament_platform/features/tournaments/screens/category_court_management_screen.dart';
-import 'package:tournament_platform/features/tournaments/screens/organizer_home_screen.dart';
 
 import '../features/auth/providers/auth_providers.dart';
 import '../features/auth/screens/login_screen.dart';
 import '../features/auth/screens/signup_screen.dart';
+import '../features/assistants/screens/assistant_home_screen.dart';
 import '../features/draws/screens/draw_screen.dart';
 import '../features/entries/screens/category_entries_screen.dart';
 import '../features/matches/screens/match_live_scoring_screen.dart';
 import '../features/matches/screens/matches_list_screen.dart';
+import '../features/organizers/screens/organizer_home_screen.dart';
+import '../features/organizers/screens/tournament_list_screen.dart';
+import '../features/organizers/screens/assistant_management_screen.dart';
+import '../features/players/screens/player_home_screen.dart';
+import '../features/players/screens/tournament_browse_screen.dart';
+import '../features/players/screens/leaderboard_screen.dart';
 import '../features/results/screens/results_screen.dart';
 import '../features/role_selector/screens/role_selector_screen.dart';
+import '../features/tournaments/screens/category_court_management_screen.dart';
+import '../features/roles/screens/tournament_roles_screen.dart';
 
 /// Route guarding lives here, not scattered through screens: every
 /// role-gated route (once added) should check auth state via this same
@@ -45,6 +49,34 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/organizer/home',
         builder: (context, state) => const OrganizerHomeScreen(),
+      ),
+      GoRoute(
+        path: '/organizer/organizations/:orgId/tournaments',
+        builder: (context, state) {
+          final orgId = state.pathParameters['orgId']!;
+          final orgName = state.uri.queryParameters['name'] ?? 'Organization';
+          return TournamentListScreen(organizationId: orgId, organizationName: orgName);
+        },
+      ),
+      GoRoute(
+        path: '/organizer/organizations/:orgId/assistants',
+        builder: (context, state) {
+          final orgId = state.pathParameters['orgId']!;
+          final orgName = state.uri.queryParameters['name'] ?? 'Organization';
+          return AssistantManagementScreen(organizationId: orgId, organizationName: orgName);
+        },
+      ),
+      GoRoute(
+        path: '/player/browse',
+        builder: (context, state) => const TournamentBrowseScreen(),
+      ),
+      GoRoute(
+        path: '/player/leaderboard/:tournamentId',
+        builder: (context, state) {
+          final tournamentId = state.pathParameters['tournamentId']!;
+          final tournamentName = state.uri.queryParameters['name'] ?? 'Tournament';
+          return LeaderboardScreen(tournamentId: tournamentId, tournamentName: tournamentName);
+        },
       ),
       GoRoute(
         path: '/assistant/tournaments/:tournamentId',
