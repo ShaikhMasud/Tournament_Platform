@@ -28,6 +28,62 @@ class SignupSerializer(serializers.ModelSerializer):
         return user
 
 
+class UserSearchSerializer(serializers.ModelSerializer):
+    """Serializer for user search results."""
+    
+    display_name = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = User
+        fields = ["id", "email", "username", "display_name"]
+    
+    def get_display_name(self, obj):
+        try:
+            return obj.player_profiles.first().display_name if hasattr(obj, 'player_profiles') else obj.username
+        except:
+            return obj.username
+
+
+class AssistantSignupSerializer(serializers.Serializer):
+    """Serializer for creating a new assistant user."""
+    
+    email = serializers.EmailField(required=True)
+    username = serializers.CharField(required=True, min_length=3)
+    password = serializers.CharField(write_only=True, validators=[validate_password], required=False)
+    display_name = serializers.CharField(required=True)
+    send_invite = serializers.BooleanField(default=True, help_text="Send invitation email")
+    
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return value
+    
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("This username is already taken.")
+        return value
+    
+    def create(self, validated_data):
+        password = validated_data.pop('password', None)
+        # Generate password if not provided
+        if not password:
+            import secrets
+            import string
+            alphabet = string.ascii_letters + string.digits
+            password = ''.join(secrets.choice(alphabet) for _ in range(12))
+        
+        user = User.objects.create_user(
+            email=validated_data['email'],
+            username=validated_data['username'],
+            password=password,
+        )
+        PlayerProfile.objects.create(
+            user=user, 
+            display_name=validated_data['display_name']
+        )
+        return user
+
+
 class CapabilitySerializer(serializers.ModelSerializer):
     class Meta:
         model = AssistantCapability

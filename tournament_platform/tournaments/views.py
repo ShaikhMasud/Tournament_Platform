@@ -259,3 +259,212 @@ class TournamentRoleCapabilitiesView(APIView):
 
         role.refresh_from_db()
         return Response(TournamentRoleSerializer(role).data)
+
+
+class PublicTournamentsView(APIView):
+    """
+    GET /api/tournaments/public/
+    Returns all public tournaments for browsing.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        tournaments = Tournament.objects.filter(
+            is_public=True
+        ).select_related("organization").prefetch_related("categories").order_by("-created_at")
+        
+        data = []
+        for t in tournaments:
+            data.append({
+                "id": str(t.id),
+                "name": t.name,
+                "sport": t.sport,
+                "is_public": t.is_public,
+                "organization_name": t.organization.name if t.organization else None,
+                "categories": [
+                    {
+                        "id": str(c.id),
+                        "name": c.name,
+                        "draw_format": c.draw_format,
+                        "capacity": c.capacity,
+                        "status": c.status,
+                    }
+                    for c in t.categories.all()
+                ],
+                "created_at": t.created_at.isoformat() if t.created_at else None,
+            })
+        
+        return Response(data)
+
+
+class PlayerTournamentsView(APIView):
+    """
+    GET /api/tournaments/my/
+    Returns tournaments where the player has entries.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from entries.models import Entry
+        from accounts.models import TournamentRole
+        
+        # Get player's entries
+        player = request.user.player_profiles.first()
+        if not player:
+            return Response([])
+        
+        entries = Entry.objects.filter(
+            player=player
+        ).select_related(
+            "category__tournament__organization"
+        ).order_by("-created_at")
+        
+        # Get tournaments where user has roles (organizer/assistant)
+        role_tournaments = TournamentRole.objects.filter(
+            user=request.user,
+            is_active=True
+        ).select_related("tournament__organization").values_list("tournament_id", flat=True)
+        
+        tournaments = {}
+        
+        for entry in entries:
+            t = entry.category.tournament
+            if t.id not in tournaments:
+                tournaments[t.id] = {
+                    "id": str(t.id),
+                    "name": t.name,
+                    "sport": t.sport,
+                    "is_public": t.is_public,
+                    "organization_name": t.organization.name if t.organization else None,
+                    "entries": [],
+                    "is_organizer": t.id in role_tournaments,
+                }
+            tournaments[t.id]["entries"].append({
+                "category_id": str(entry.category.id),
+                "category_name": entry.category.name,
+                "status": entry.status,
+                "created_at": entry.created_at.isoformat() if entry.created_at else None,
+            })
+        
+        return Response(list(tournaments.values()))
+
+
+class TournamentCreateView(APIView):
+    """
+    POST /api/tournaments/create/
+    Create a new tournament under an organization.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        from organizations.models import Organization
+        from accounts.models import TournamentRole
+        
+        name = request.data.get("name")
+        sport = request.data.get("sport", "badminton_single_game")
+        organization_id = request.data.get("organization_id")
+        is_public = request.data.get("is_public", False)
+        
+        if not name:
+            return Response({"detail": "Tournament name is required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not organization_id:
+            return Response({"detail": "Organization ID is required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            org = Organization.objects.get(pk=organization_id)
+        except Organization.DoesNotExist:
+            return Response({"detail": "Organization not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Check if user owns this organization
+        if org.owner_id != request.user.id:
+            return Response({"detail": "You don't own this organization"}, status=status.HTTP_403_FORBIDDEN)
+        
+        with transaction.atomic():
+            # Create tournament
+            tournament = Tournament.objects.create(
+                name=name,
+                sport=sport,
+                organization=org,
+                is_public=is_public,
+            )
+            
+            # Create organizer role for the creator
+            TournamentRole.objects.create(
+                user=request.user,
+                tournament=tournament,
+                role=TournamentRole.ORGANIZER,
+                is_active=True,
+                granted_by=request.user,
+            )
+        
+        return Response(
+            TournamentSerializer(tournament).data,
+            status=status.HTTP_201_CREATED
+        )
+
+
+class AssignExistingUserView(APIView):
+    """
+    POST /api/tournaments/{tournament_id}/assign-user/
+    Assign an existing user as an assistant.
+    """
+
+    permission_classes = [IsAuthenticated, IsOrganizerOfTournament]
+
+    def post(self, request, tournament_pk):
+        tournament = get_object_or_404(Tournament, pk=tournament_pk)
+        
+        email = request.data.get("email")
+        capabilities = request.data.get("capabilities", [])
+        
+        if not email:
+            return Response({"detail": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response({"detail": "User not found with this email"}, status=status.HTTP_404_NOT_FOUND)
+        
+        with transaction.atomic():
+            # Check if role already exists
+            existing_role = TournamentRole.objects.filter(
+                user=user, tournament=tournament, role=TournamentRole.ASSISTANT
+            ).first()
+            
+            if existing_role:
+                if existing_role.is_active:
+                    return Response(
+                        {"detail": "User is already an assistant in this tournament"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                # Reactivate
+                existing_role.is_active = True
+                existing_role.granted_by = request.user
+                existing_role.save()
+                role_obj = existing_role
+            else:
+                role_obj = TournamentRole.objects.create(
+                    user=user,
+                    tournament=tournament,
+                    role=TournamentRole.ASSISTANT,
+                    is_active=True,
+                    granted_by=request.user,
+                )
+            
+            # Set capabilities
+            role_obj.capabilities.all().delete()
+            for cap in capabilities:
+                AssistantCapability.objects.create(
+                    tournament_role=role_obj,
+                    capability=cap,
+                    is_active=True,
+                )
+        
+        return Response(
+            TournamentRoleSerializer(role_obj).data,
+            status=status.HTTP_201_CREATED
+        )

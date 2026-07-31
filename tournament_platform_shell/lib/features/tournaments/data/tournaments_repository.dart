@@ -19,23 +19,44 @@ class TournamentsRepository {
         .toList();
   }
 
+  /// GET /tournaments/public/ — all public tournaments for browsing
+  Future<List<Tournament>> listPublicTournaments() async {
+    final response = await _apiClient.dio.get(ApiEndpoints.publicTournaments);
+    final results = (response.data is List)
+        ? response.data as List
+        : (response.data['results'] as List);
+    return results
+        .map((json) => Tournament.fromJson(json as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// GET /tournaments/my/ — tournaments where player has entries
+  Future<List<Map<String, dynamic>>> listMyTournaments() async {
+    final response = await _apiClient.dio.get(ApiEndpoints.myTournaments);
+    if (response.data is List) {
+      return List<Map<String, dynamic>>.from(response.data);
+    }
+    return [];
+  }
+
   Future<Tournament> getTournament(String id) async {
     final response = await _apiClient.dio.get(ApiEndpoints.tournament(id));
     return Tournament.fromJson(response.data as Map<String, dynamic>);
   }
 
-  /// POST /tournaments/ — organizationId must be one of the caller's own
-  /// orgs; the server re-validates this regardless of what's sent.
+  /// POST /tournaments/create/ — create a new tournament under an organization
   Future<Tournament> createTournament({
     required String organizationId,
     required String name,
+    String? sport,
     bool isPublic = false,
   }) async {
     final response = await _apiClient.dio.post(
-      ApiEndpoints.tournaments,
+      ApiEndpoints.createTournament,
       data: {
-        'organization': organizationId,
+        'organization_id': organizationId,
         'name': name,
+        if (sport != null) 'sport': sport,
         'is_public': isPublic,
       },
     );
@@ -68,5 +89,74 @@ class TournamentsRepository {
       data: {'name': name},
     );
     return Court.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  /// GET /tournaments/{id}/roles/ — get tournament roles
+  Future<List<Map<String, dynamic>>> getTournamentRoles(String tournamentId) async {
+    final response = await _apiClient.dio.get(ApiEndpoints.tournamentRoles(tournamentId));
+    if (response.data is List) {
+      return List<Map<String, dynamic>>.from(response.data);
+    }
+    return [];
+  }
+
+  /// POST /tournaments/{id}/assign-user/ — assign existing user as assistant
+  Future<Map<String, dynamic>> assignExistingUser({
+    required String tournamentId,
+    required String email,
+    List<String> capabilities = const [],
+  }) async {
+    final response = await _apiClient.dio.post(
+      ApiEndpoints.assignUser(tournamentId),
+      data: {
+        'email': email,
+        'capabilities': capabilities,
+      },
+    );
+    return Map<String, dynamic>.from(response.data);
+  }
+
+  /// POST /auth/assistant-signup/ — create new assistant account
+  Future<Map<String, dynamic>> createAssistantAccount({
+    required String email,
+    required String username,
+    required String displayName,
+    String? tournamentId,
+    List<String> capabilities = const [],
+    bool sendInvite = true,
+  }) async {
+    final response = await _apiClient.dio.post(
+      ApiEndpoints.assistantSignup,
+      data: {
+        'email': email,
+        'username': username,
+        'display_name': displayName,
+        if (tournamentId != null) 'tournament_id': tournamentId,
+        'capabilities': capabilities,
+        'send_invite': sendInvite,
+      },
+    );
+    return Map<String, dynamic>.from(response.data);
+  }
+
+  /// GET /auth/users/search/ — search for users by email or name
+  Future<List<Map<String, dynamic>>> searchUsers(String query) async {
+    final response = await _apiClient.dio.get(
+      ApiEndpoints.userSearch,
+      queryParameters: {'q': query},
+    );
+    if (response.data is Map && response.data['results'] != null) {
+      return List<Map<String, dynamic>>.from(response.data['results']);
+    }
+    return [];
+  }
+
+  /// GET /tournaments/{id}/leaderboard/ — get leaderboard
+  Future<Map<String, dynamic>> getLeaderboard(String tournamentId, {String? categoryId}) async {
+    final response = await _apiClient.dio.get(
+      ApiEndpoints.leaderboard(tournamentId),
+      queryParameters: categoryId != null ? {'category': categoryId} : null,
+    );
+    return Map<String, dynamic>.from(response.data);
   }
 }

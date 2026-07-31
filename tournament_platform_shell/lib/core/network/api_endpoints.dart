@@ -9,18 +9,31 @@
 class ApiEndpoints {
   ApiEndpoints._();
 
+  // --- Auth ---
+  static const String authSession = '/auth/session/';
+  static const String authSignup = '/auth/signup/';
+  static const String authLogin = '/auth/login/';
+  static const String authLogout = '/auth/logout/';
+  static const String authRefresh = '/auth/refresh/';
+  static const String userSearch = '/auth/users/search/';
+  static const String assistantSignup = '/auth/assistant-signup/';
+
   // --- Organizations ---
   static const String organizations = '/organizations/';
   static String organization(String id) => '/organizations/$id/';
 
   // --- Tournaments ---
   static const String tournaments = '/tournaments/';
+  static const String publicTournaments = '/tournaments/public/';
+  static const String myTournaments = '/tournaments/my/';
+  static const String createTournament = '/tournaments/create/';
   static String tournament(String id) => '/tournaments/$id/';
   static String tournamentRoles(String tournamentId) => '/tournaments/$tournamentId/roles/';
   static String tournamentRole(String tournamentId, String roleId) =>
       '/tournaments/$tournamentId/roles/$roleId/';
   static String tournamentRoleCapabilities(String tournamentId, String roleId) =>
       '/tournaments/$tournamentId/roles/$roleId/capabilities/';
+  static String assignUser(String tournamentId) => '/tournaments/$tournamentId/assign-user/';
 
   // --- Categories (nested under a tournament) ---
   static String categories(String tournamentId) =>
@@ -48,6 +61,7 @@ class ApiEndpoints {
   static String matchSchedule(String matchId) => '/matches/$matchId/schedule/';
   static String matchStart(String matchId) => '/matches/$matchId/start/';
   static String matchScore(String matchId) => '/matches/$matchId/score/';
+  static String leaderboard(String tournamentId) => '/tournaments/$tournamentId/leaderboard/';
 
   // --- Results ---
   static String tournamentResults(String tournamentId) => '/tournaments/$tournamentId/results/pdf/';

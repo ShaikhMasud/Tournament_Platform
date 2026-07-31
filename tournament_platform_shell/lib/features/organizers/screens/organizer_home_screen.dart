@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../auth/providers/auth_providers.dart';
-import '../../organizations/data/organizations_repository.dart';
 import '../../organizations/providers/organizations_providers.dart';
 import '../../organizations/models/organization.dart';
+import '../../tournaments/data/tournaments_repository.dart';
+import '../../tournaments/providers/tournaments_providers.dart';
 
 class OrganizerHomeScreen extends ConsumerWidget {
   const OrganizerHomeScreen({super.key});
@@ -75,8 +75,21 @@ class OrganizerHomeScreen extends ConsumerWidget {
           FilledButton(
             onPressed: () async {
               if (controller.text.trim().isNotEmpty) {
-                await ref.read(organizationsProvider.notifier).createOrganization(controller.text.trim());
-                if (context.mounted) Navigator.pop(context);
+                try {
+                  await ref.read(organizationsProvider.notifier).createOrganization(controller.text.trim());
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Organization created successfully!')),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error: $e')),
+                    );
+                  }
+                }
               }
             },
             child: const Text('Create'),
@@ -88,81 +101,125 @@ class OrganizerHomeScreen extends ConsumerWidget {
 
   void _showCreateTournamentDialog(BuildContext context, WidgetRef ref, String orgId, String orgName) {
     final nameController = TextEditingController();
-    final descController = TextEditingController();
     final locationController = TextEditingController();
-    DateTime? startDate;
-    DateTime? endDate;
+    String selectedSport = 'badminton_single_game';
+    bool isPublic = true;
+    bool isLoading = false;
 
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
+      builder: (dialogContext) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
           title: Text('New Tournament - $orgName'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 TextField(
                   controller: nameController,
-                  decoration: const InputDecoration(labelText: 'Tournament Name'),
+                  decoration: const InputDecoration(
+                    labelText: 'Tournament Name *',
+                    hintText: 'e.g., City Championship 2024',
+                  ),
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: descController,
-                  decoration: const InputDecoration(labelText: 'Description'),
-                  maxLines: 2,
+                const SizedBox(height: 16),
+                const Text('Sport', style: TextStyle(fontWeight: FontWeight.w500)),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  value: selectedSport,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'badminton_single_game', child: Text('Badminton (Singles)')),
+                    DropdownMenuItem(value: 'badminton_double_game', child: Text('Badminton (Doubles)')),
+                    DropdownMenuItem(value: 'tennis_single_game', child: Text('Tennis (Singles)')),
+                    DropdownMenuItem(value: 'tennis_double_game', child: Text('Tennis (Doubles)')),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) setState(() => selectedSport = value);
+                  },
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 TextField(
                   controller: locationController,
-                  decoration: const InputDecoration(labelText: 'Location'),
+                  decoration: const InputDecoration(
+                    labelText: 'Location',
+                    hintText: 'e.g., City Sports Center',
+                  ),
                 ),
-                const SizedBox(height: 12),
-                ListTile(
+                const SizedBox(height: 16),
+                SwitchListTile(
+                  title: const Text('Public Tournament'),
+                  subtitle: const Text('Allow anyone to register'),
+                  value: isPublic,
+                  onChanged: (value) => setState(() => isPublic = value),
                   contentPadding: EdgeInsets.zero,
-                  title: Text(startDate == null ? 'Select Start Date' : 'Start: ${startDate!.toString().split(' ')[0]}'),
-                  trailing: const Icon(Icons.calendar_today),
-                  onTap: () async {
-                    final date = await showDatePicker(
-                      context: context,
-                      initialDate: DateTime.now(),
-                      firstDate: DateTime.now(),
-                      lastDate: DateTime.now().add(const Duration(days: 365)),
-                    );
-                    if (date != null) setState(() => startDate = date);
-                  },
-                ),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(endDate == null ? 'Select End Date' : 'End: ${endDate!.toString().split(' ')[0]}'),
-                  trailing: const Icon(Icons.calendar_today),
-                  onTap: () async {
-                    final date = await showDatePicker(
-                      context: context,
-                      initialDate: startDate ?? DateTime.now(),
-                      firstDate: startDate ?? DateTime.now(),
-                      lastDate: DateTime.now().add(const Duration(days: 365)),
-                    );
-                    if (date != null) setState(() => endDate = date);
-                  },
                 ),
               ],
             ),
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: isLoading ? null : () => Navigator.pop(dialogContext),
               child: const Text('Cancel'),
             ),
             FilledButton(
-              onPressed: () {
-                // TODO: Call API to create tournament
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Tournament creation API pending')),
-                );
-              },
-              child: const Text('Create'),
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      if (nameController.text.trim().isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Please enter a tournament name')),
+                        );
+                        return;
+                      }
+                      
+                      setState(() => isLoading = true);
+                      
+                      try {
+                        final repo = ref.read(tournamentsRepositoryProvider);
+                        final tournament = await repo.createTournament(
+                          organizationId: orgId,
+                          name: nameController.text.trim(),
+                          sport: selectedSport,
+                          isPublic: isPublic,
+                        );
+                        
+                        if (dialogContext.mounted) {
+                          Navigator.pop(dialogContext);
+                        }
+                        
+                        // Refresh session to update roles
+                        ref.invalidate(authControllerProvider);
+                        
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Tournament "${tournament.name}" created!'),
+                              action: SnackBarAction(
+                                label: 'View',
+                                onPressed: () {
+                                  // Navigate to tournament management
+                                },
+                              ),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        setState(() => isLoading = false);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error: $e')),
+                          );
+                        }
+                      }
+                    },
+              child: isLoading
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Text('Create'),
             ),
           ],
         ),

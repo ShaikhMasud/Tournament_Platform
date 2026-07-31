@@ -3,8 +3,12 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_nested import routers as nested_routers
 
 from .views import (
+    AssignExistingUserView,
     CategoryViewSet,
     CourtViewSet,
+    PlayerTournamentsView,
+    PublicTournamentsView,
+    TournamentCreateView,
     TournamentRoleCapabilitiesView,
     TournamentRoleDetailView,
     TournamentRoleListView,
@@ -25,6 +29,22 @@ tournaments_router.register(r"courts", CourtViewSet, basename="tournament-courts
 urlpatterns = [
     path("", include(router.urls)),
     path("", include(tournaments_router.urls)),
+    # Additional tournament endpoints
+    path(
+        "tournaments/public/",
+        PublicTournamentsView.as_view(),
+        name="tournament-public",
+    ),
+    path(
+        "tournaments/my/",
+        PlayerTournamentsView.as_view(),
+        name="tournament-my",
+    ),
+    path(
+        "tournaments/create/",
+        TournamentCreateView.as_view(),
+        name="tournament-create",
+    ),
     # Role management endpoints
     path(
         "tournaments/<uuid:tournament_pk>/roles/",
@@ -40,5 +60,10 @@ urlpatterns = [
         "tournaments/<uuid:tournament_pk>/roles/<uuid:role_id>/capabilities/",
         TournamentRoleCapabilitiesView.as_view(),
         name="tournament-role-capabilities",
+    ),
+    path(
+        "tournaments/<uuid:tournament_pk>/assign-user/",
+        AssignExistingUserView.as_view(),
+        name="tournament-assign-user",
     ),
 ]
