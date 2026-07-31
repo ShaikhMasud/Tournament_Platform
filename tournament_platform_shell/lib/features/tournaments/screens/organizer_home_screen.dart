@@ -12,9 +12,16 @@ class OrganizerHomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tournamentsAsync = ref.watch(tournamentsProvider);
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Your Tournaments')),
+      appBar: AppBar(
+        title: const Text('Your Tournaments'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/'),
+        ),
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showCreateTournamentDialog(context, ref),
         icon: const Icon(Icons.add),
@@ -22,11 +29,56 @@ class OrganizerHomeScreen extends ConsumerWidget {
       ),
       body: tournamentsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(child: Text('Failed to load tournaments: $err')),
+        error: (err, _) => Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Failed to load tournaments: $err', style: TextStyle(color: colorScheme.error)),
+              const SizedBox(height: 8),
+              ElevatedButton(
+                onPressed: () => ref.invalidate(tournamentsProvider),
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
         data: (tournaments) {
           if (tournaments.isEmpty) {
-            return const Center(
-              child: Text('No tournaments yet — create one to get started.'),
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Icon(
+                        Icons.emoji_events_outlined,
+                        size: 40,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      'No Tournaments Yet',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Create your first tournament to get started.',
+                      style: TextStyle(color: colorScheme.onSurfaceVariant),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
             );
           }
           return RefreshIndicator(
@@ -35,16 +87,35 @@ class OrganizerHomeScreen extends ConsumerWidget {
               itemCount: tournaments.length,
               itemBuilder: (context, index) {
                 final Tournament t = tournaments[index];
-                return ListTile(
-                  title: Text(t.name),
-                  subtitle: Text(
-                    '${t.sport} · ${t.isPublic ? "Public" : "Private"} · '
-                    '${t.categories.length} categories · ${t.courts.length} courts',
+                return Card(
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.all(16),
+                    leading: Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        Icons.emoji_events,
+                        color: colorScheme.primary,
+                      ),
+                    ),
+                    title: Text(
+                      t.name,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        '${t.sport} · ${t.isPublic ? "Public" : "Private"}',
+                      ),
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push('/tournaments/${t.id}/manage'),
                   ),
-                  // GoRouter-based navigation — this app uses
-                  // MaterialApp.router, so Navigator.pushNamed has no
-                  // route table to resolve against and throws at runtime.
-                  onTap: () => context.push('/tournaments/${t.id}/manage'),
                 );
               },
             ),
