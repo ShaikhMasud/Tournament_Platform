@@ -10,6 +10,6 @@ daphne
 celery
 redis
 django-celery-beat
-weasyprint
+reportlab
 python-decouple
 django-cors-headers
