@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tournament_platform/features/assistants/screens/assistant_home_screen.dart';
+import 'package:tournament_platform/features/players/screens/player_home_screen.dart';
 import 'package:tournament_platform/features/roles/screens/tournament_roles_screen.dart';
 import 'package:tournament_platform/features/tournaments/screens/category_court_management_screen.dart';
 import 'package:tournament_platform/features/tournaments/screens/organizer_home_screen.dart';
@@ -52,6 +53,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           final tournamentName = state.uri.queryParameters['name'] ?? 'Tournament';
           return AssistantHomeScreen(tournamentId: tournamentId, tournamentName: tournamentName);
         },
+      ),
+      GoRoute(
+        path: '/player/home',
+        builder: (context, state) => const PlayerHomeScreen(),
       ),
       GoRoute(
         path: '/tournaments/:tournamentId/manage',

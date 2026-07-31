@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     "draws",
     "matches",
     "results",
+    "players",
     "core",
 ]
 
