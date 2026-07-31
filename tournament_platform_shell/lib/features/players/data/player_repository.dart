@@ -9,21 +9,21 @@ class PlayerRepository {
 
   /// Get tournaments this player has entries in.
   Future<List<PlayerTournament>> getMyTournaments() async {
-    final response = await _apiClient.get(ApiEndpoints.playerTournaments);
+    final response = await _apiClient.dio.get(ApiEndpoints.playerTournaments);
     final List<dynamic> data = response.data as List<dynamic>;
     return data.map((e) => PlayerTournament.fromJson(e as Map<String, dynamic>)).toList();
   }
 
   /// Get entries for the current player.
   Future<List<PlayerEntry>> getMyEntries() async {
-    final response = await _apiClient.get(ApiEndpoints.playerEntries);
+    final response = await _apiClient.dio.get(ApiEndpoints.playerEntries);
     final List<dynamic> data = response.data as List<dynamic>;
     return data.map((e) => PlayerEntry.fromJson(e as Map<String, dynamic>)).toList();
   }
 
   /// Get entry detail including bracket position.
   Future<PlayerEntryDetail> getEntryDetail(String entryId) async {
-    final response = await _apiClient.get('${ApiEndpoints.playerEntries}/$entryId');
+    final response = await _apiClient.dio.get('${ApiEndpoints.playerEntries}/$entryId');
     return PlayerEntryDetail.fromJson(response.data as Map<String, dynamic>);
   }
 }

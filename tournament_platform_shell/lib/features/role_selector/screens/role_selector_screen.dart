@@ -180,6 +180,7 @@ class _RoleCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     this.badge,
+    this.isAvailable = true,
     required this.onTap,
   });
 
@@ -187,7 +188,8 @@ class _RoleCard extends StatelessWidget {
   final Color color;
   final String title;
   final String subtitle;
-  final String? badge; // If provided, shows a count badge
+  final String? badge;
+  final bool isAvailable;
   final VoidCallback onTap;
 
   @override
@@ -197,8 +199,10 @@ class _RoleCard extends StatelessWidget {
     return Card(
       elevation: 2,
       child: InkWell(
-        onTap: onTap,
+        onTap: isAvailable ? onTap : null,
         borderRadius: BorderRadius.circular(12),
+        child: Opacity(
+          opacity: isAvailable ? 1.0 : 0.5,
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Row(
@@ -268,6 +272,7 @@ class _RoleCard extends StatelessWidget {
           ),
         ),
       ),
+      )
     );
   }
 }

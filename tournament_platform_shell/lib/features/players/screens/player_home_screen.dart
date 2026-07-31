@@ -206,14 +206,14 @@ class PlayerHomeScreen extends ConsumerWidget {
                                       icon: Icons.leaderboard,
                                       label: 'Standings',
                                       onTap: () {
-                                        context.push('/player/leaderboard/${tournament.tournamentId}?name=${Uri.encodeComponent(tournament.name)}');
+                                        context.push('/player/leaderboard/${tournament.id}?name=${Uri.encodeComponent(tournament.name)}');
                                       },
                                     ),
                                     _MiniAction(
                                       icon: Icons.picture_as_pdf,
                                       label: 'Results',
                                       onTap: () {
-                                        context.push('/tournaments/${tournament.tournamentId}/results');
+                                        context.push('/tournaments/${tournament.id}/results');
                                       },
                                     ),
                                     if (tournament.nextMatchId != null)
@@ -325,7 +325,7 @@ class PlayerHomeScreen extends ConsumerWidget {
                 subtitle: Text(t.categoryName),
                 onTap: () {
                   Navigator.pop(context);
-                  context.push('/player/leaderboard/${t.tournamentId}?name=${Uri.encodeComponent(t.name)}');
+                  context.push('/player/leaderboard/${t.nextMatchId}?name=${Uri.encodeComponent(t.name)}');
                 },
               )),
             ],
