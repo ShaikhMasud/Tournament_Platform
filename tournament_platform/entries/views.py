@@ -108,11 +108,15 @@ class EntryDeleteView(APIView):
 
     def delete(self, request, pk):
         entry = get_object_or_404(
-            Entry.objects.select_related("category__tournament", "player"), pk=pk
+            Entry.objects.select_related("category__tournament", "player", "player__user"), pk=pk
         )
         tournament = entry.category.tournament
         is_privileged = _actor_is_privileged(request.user, tournament)
-        is_owner = getattr(request.user, "playerprofile", None) == entry.player
+        
+        # Check if the request user is the owner of the player profile
+        is_owner = False
+        if hasattr(request.user, 'playerprofile'):
+            is_owner = request.user.playerprofile.id == entry.player_id
 
         if not (is_privileged or is_owner):
             raise PermissionDenied(

@@ -9,7 +9,7 @@ class DrawSlotSerializer(serializers.ModelSerializer):
     """Read-only serializer for draw slots — no writes after initial generation."""
 
     entry_display_name = serializers.SerializerMethodField()
-    entry_id = serializers.IntegerField(source="entry.id", read_only=True, allow_null=True)
+    entry_id = serializers.UUIDField(source="entry.id", read_only=True, allow_null=True)
 
     class Meta:
         model = DrawSlot

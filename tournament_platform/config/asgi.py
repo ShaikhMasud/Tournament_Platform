@@ -24,11 +24,20 @@ django_asgi_app = get_asgi_application()
 from matches.routing import websocket_urlpatterns
 from matches.ws_auth import JWTAuthMiddleware
 
+# WebSocket URLs are mounted at /ws/ prefix
+ws_urlpatterns = [
+    URLRouter([
+        # /ws/matches/{match_id}/
+        *websocket_urlpatterns,
+    ]),
+]
+
 application = ProtocolTypeRouter({
     "http": django_asgi_app,
     "websocket": AllowedHostsOriginValidator(
         JWTAuthMiddleware(
-            URLRouter(websocket_urlpatterns)
+            URLRouter(websocket_urlpatterns)  # Mounts directly at /matches/...
+            # In production, configure your reverse proxy (nginx) to map /ws/ -> this
         )
     ),
 })

@@ -9,7 +9,7 @@ class EntrySerializer(serializers.ModelSerializer):
     """Read-only representation used by the list/detail endpoints."""
 
     player_display_name = serializers.SerializerMethodField()
-    player_id = serializers.IntegerField(source="player_id", read_only=True)
+    player_id = serializers.UUIDField(source="player_id", read_only=True)
 
     class Meta:
         model = Entry

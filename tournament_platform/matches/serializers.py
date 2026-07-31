@@ -10,7 +10,7 @@ class MatchEntrySerializer(serializers.ModelSerializer):
     """Minimal entry representation for match display."""
 
     player_display_name = serializers.SerializerMethodField()
-    player_id = serializers.IntegerField(source="player.id", read_only=True)
+    player_id = serializers.UUIDField(source="player.id", read_only=True)
 
     class Meta:
         model = Entry
